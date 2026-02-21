@@ -55,10 +55,10 @@ const progressSteps = [
       <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-violet-500/5 rounded-full blur-[150px]" />
     </div>
 
-    <div class="relative z-10 h-full flex flex-col items-center justify-center px-4 pt-10 sm:pt-14 lg:pt-16 pb-3 sm:pb-6 lg:pb-8">
+    <div class="relative z-10 h-full flex flex-col items-center justify-center px-4 py-2 sm:py-4 lg:py-6">
 
       <!-- Logo -->
-      <div class="mb-5 sm:mb-7 text-center">
+      <div class="mb-3 sm:mb-4 text-center">
         <div class="inline-flex items-center gap-3 sm:gap-4">
           <div class="relative">
             <div class="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center animate-pulse-glow overflow-hidden">
@@ -76,14 +76,14 @@ const progressSteps = [
 
       <!-- Main Card -->
       <div class="w-full max-w-3xl">
-        <div class="glass rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-12 text-center relative overflow-hidden">
+        <div class="glass rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 text-center relative overflow-hidden">
           <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-500 via-cyan-500 to-violet-500" />
 
           <!-- Rocket Icon -->
-          <div class="flex justify-center mb-5 sm:mb-6">
+          <div class="flex justify-center mb-3 sm:mb-4">
             <div class="relative">
-              <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-sky-500/20 to-violet-500/20 flex items-center justify-center border border-sky-500/30 animate-rocket-hover">
-                <Rocket class="w-10 h-10 sm:w-12 sm:h-12 text-sky-400 -rotate-45" />
+              <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-sky-500/20 to-violet-500/20 flex items-center justify-center border border-sky-500/30 animate-rocket-hover">
+                <Rocket class="w-8 h-8 sm:w-10 sm:h-10 text-sky-400 -rotate-45" />
               </div>
               <!-- Particle trails -->
               <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 flex gap-1">
@@ -95,16 +95,16 @@ const progressSteps = [
           </div>
 
           <!-- Heading -->
-          <h2 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2 sm:mb-3">
+          <h2 class="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-1.5 sm:mb-2">
             Segera <span class="gradient-text">Hadir</span>
           </h2>
 
-          <p class="text-gray-400 text-base sm:text-lg mb-5 sm:mb-7 max-w-lg mx-auto leading-relaxed">
+          <p class="text-gray-400 text-sm sm:text-base mb-4 sm:mb-5 max-w-lg mx-auto leading-relaxed">
             Kami sedang membangun platform terbaik untuk Anda. Nantikan peluncuran kami!
           </p>
 
           <!-- Progress Steps -->
-          <div class="flex items-center justify-center gap-0 mb-6 sm:mb-8 max-w-md mx-auto">
+          <div class="flex items-center justify-center gap-0 mb-4 sm:mb-5 max-w-md mx-auto">
             <template v-for="(step, i) in progressSteps" :key="step.label">
               <div class="flex flex-col items-center gap-2">
                 <div
@@ -132,31 +132,31 @@ const progressSteps = [
           </div>
 
           <!-- Services -->
-          <div class="grid grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-7">
+          <div class="grid grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-5">
             <div
               v-for="service in services"
               :key="service.label"
-              class="group p-3 sm:p-4 rounded-xl bg-white/5 border border-white/10 hover:border-sky-500/30 hover:bg-white/10 transition-all duration-300"
+              class="group p-2.5 sm:p-3 rounded-xl bg-white/5 border border-white/10 hover:border-sky-500/30 hover:bg-white/10 transition-all duration-300"
             >
-              <div :class="['w-9 h-9 sm:w-11 sm:h-11 rounded-lg bg-gradient-to-br flex items-center justify-center mx-auto mb-1.5 sm:mb-2.5 group-hover:scale-110 transition-transform duration-300', service.color]">
-                <component :is="service.icon" class="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              <div :class="['w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br flex items-center justify-center mx-auto mb-1 sm:mb-2 group-hover:scale-110 transition-transform duration-300', service.color]">
+                <component :is="service.icon" class="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5 text-white" />
               </div>
-              <span class="text-[10px] sm:text-xs lg:text-sm text-gray-400 font-medium leading-tight">{{ service.label }}</span>
+              <span class="text-[10px] sm:text-xs text-gray-400 font-medium leading-tight">{{ service.label }}</span>
             </div>
           </div>
 
           <!-- Contact -->
-          <div class="border-t border-white/10 pt-5 sm:pt-6">
-            <p class="text-gray-500 text-xs sm:text-sm mb-3 sm:mb-4">Hubungi kami</p>
+          <div class="border-t border-white/10 pt-3 sm:pt-4">
+            <p class="text-gray-500 text-xs sm:text-sm mb-2 sm:mb-3">Hubungi kami</p>
 
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-4 mb-4">
-              <a :href="`mailto:${supportEmail}`" class="flex items-center gap-2 px-4 py-2 sm:py-2.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 hover:bg-sky-500/20 transition-colors">
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 mb-3">
+              <a :href="`mailto:${supportEmail}`" class="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 hover:bg-sky-500/20 transition-colors">
                 <Mail class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span class="text-xs sm:text-sm font-medium">{{ supportEmail }}</span>
+                <span class="text-xs font-medium">{{ supportEmail }}</span>
               </a>
-              <a :href="`tel:${supportPhoneRaw}`" class="flex items-center gap-2 px-4 py-2 sm:py-2.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-colors">
+              <a :href="`tel:${supportPhoneRaw}`" class="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/20 transition-colors">
                 <Phone class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span class="text-xs sm:text-sm font-medium">{{ supportPhone }}</span>
+                <span class="text-xs font-medium">{{ supportPhone }}</span>
               </a>
             </div>
 
@@ -187,7 +187,7 @@ const progressSteps = [
       </div>
 
       <!-- Footer -->
-      <div class="mt-4 sm:mt-6 lg:mt-8 text-center">
+      <div class="mt-2 sm:mt-3 lg:mt-4 text-center">
         <p class="text-gray-600 text-xs sm:text-sm">&copy; {{ currentYear }} {{ companyFullName }}. All rights reserved.</p>
         <p class="text-gray-700 text-xs sm:text-sm mt-0.5">{{ companyDescriptor }}</p>
       </div>
