@@ -15,8 +15,8 @@ import {
 const services = [
   { icon: Cloud, label: 'Cloud Hosting', color: 'from-sky-400 to-cyan-400' },
   { icon: Globe, label: 'Web Development', color: 'from-cyan-400 to-teal-400' },
-  { icon: Code2, label: 'Software Dev', color: 'from-teal-400 to-emerald-400' },
-  { icon: Server, label: 'Server Mgmt', color: 'from-emerald-400 to-green-400' },
+  { icon: Code2, label: 'Software Development', color: 'from-teal-400 to-emerald-400' },
+  { icon: Server, label: 'Server Management', color: 'from-emerald-400 to-green-400' },
 ];
 
 const currentYear = new Date().getFullYear();
