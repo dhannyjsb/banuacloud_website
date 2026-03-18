@@ -14,6 +14,10 @@ interface ImportMetaEnv {
   readonly VITE_SOCIAL_INSTAGRAM: string;
   readonly VITE_SOCIAL_LINKEDIN: string;
   readonly VITE_SOCIAL_TWITTER: string;
+  readonly VITE_ADMIN_DEMO_MODE: string;
+  readonly VITE_ADMIN_EMAIL: string;
+  readonly VITE_ADMIN_PASSWORD_HASH: string;
+  readonly VITE_API_BASE_URL: string;
 }
 
 interface ImportMeta {

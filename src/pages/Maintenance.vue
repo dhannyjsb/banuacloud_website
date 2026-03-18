@@ -1,8 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import {
-  Server,
-  Globe,
-  Code2,
   Cloud,
   Rocket,
   Mail,
@@ -11,32 +9,37 @@ import {
   Linkedin,
   Twitter,
 } from 'lucide-vue-next';
-
-const services = [
-  { icon: Cloud, label: 'Cloud Hosting', color: 'from-sky-400 to-cyan-400' },
-  { icon: Globe, label: 'Web Development', color: 'from-cyan-400 to-teal-400' },
-  { icon: Code2, label: 'Software Development', color: 'from-teal-400 to-emerald-400' },
-  { icon: Server, label: 'Server Management', color: 'from-emerald-400 to-green-400' },
-];
+import { useSiteBootstrap } from '../composables/useSiteBootstrap';
+import { resolveServiceIcon } from '../lib/iconMaps';
 
 const currentYear = new Date().getFullYear();
-const companyName = import.meta.env.VITE_COMPANY_NAME || 'Banua Cloud';
-const companyTagline = import.meta.env.VITE_COMPANY_TAGLINE || 'Nusantara';
-const companyFullName = import.meta.env.VITE_COMPANY_FULL_NAME || 'Banua Cloud Nusantara';
-const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL || 'support@banuacloud.id';
-const supportPhone = import.meta.env.VITE_SUPPORT_PHONE || '+62 812-3456-7890';
-const supportPhoneRaw = import.meta.env.VITE_SUPPORT_PHONE_RAW || '+6281234567890';
-const whatsappRaw = import.meta.env.VITE_SUPPORT_WHATSAPP_RAW || '';
-const companyDescriptor = import.meta.env.VITE_COMPANY_DESCRIPTOR || 'Trusted IT Solutions Partner in Indonesia';
-const logoUrl = import.meta.env.VITE_LOGO_URL || '';
+const { siteSettings, services } = useSiteBootstrap();
+const companyName = computed(() => siteSettings.value.siteName);
+const companyTagline = computed(() => siteSettings.value.siteName);
+const companyFullName = computed(() => siteSettings.value.companyName);
+const supportEmail = computed(() => siteSettings.value.companyEmail);
+const supportPhone = computed(() => siteSettings.value.companyPhone);
+const supportPhoneRaw = computed(() => siteSettings.value.companyPhone.replace(/[^\d+]/g, ''));
+const whatsappRaw = computed(() => siteSettings.value.companyWhatsapp.replace(/\D/g, ''));
+const companyDescriptor = computed(() => siteSettings.value.siteDescription);
+const logoUrl = '';
 
-const allSocialLinks = [
-  { icon: Instagram, href: import.meta.env.VITE_SOCIAL_INSTAGRAM, label: 'Instagram' },
-  { icon: Linkedin, href: import.meta.env.VITE_SOCIAL_LINKEDIN, label: 'LinkedIn' },
-  { icon: Twitter, href: import.meta.env.VITE_SOCIAL_TWITTER, label: 'Twitter' },
-];
-const socialLinks = allSocialLinks.filter(s => s.href);
-const showWhatsapp = !!whatsappRaw;
+const publicServices = computed(() => {
+  return services.value.slice(0, 4).map((service, index) => ({
+    icon: resolveServiceIcon(service.icon),
+    label: service.name,
+    color: ['from-sky-400 to-cyan-400', 'from-cyan-400 to-teal-400', 'from-teal-400 to-emerald-400', 'from-emerald-400 to-green-400'][index] || 'from-sky-400 to-cyan-400',
+  }));
+});
+
+const socialLinks = computed(() => {
+  return [
+    { icon: Instagram, href: siteSettings.value.socialInstagram, label: 'Instagram' },
+    { icon: Linkedin, href: siteSettings.value.socialLinkedin, label: 'LinkedIn' },
+    { icon: Twitter, href: siteSettings.value.socialTwitter, label: 'Twitter' },
+  ].filter((social) => social.href);
+});
+const showWhatsapp = computed(() => Boolean(whatsappRaw.value));
 
 const progressSteps = [
   { label: 'Planning', done: true },
@@ -134,7 +137,7 @@ const progressSteps = [
           <!-- Services -->
           <div class="grid grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-5">
             <div
-              v-for="service in services"
+              v-for="service in publicServices"
               :key="service.label"
               class="group p-2.5 sm:p-3 rounded-xl bg-white/5 border border-white/10 hover:border-sky-500/30 hover:bg-white/10 transition-all duration-300"
             >

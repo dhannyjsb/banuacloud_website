@@ -1,47 +1,29 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Cloud, Mail, Phone, Instagram, Linkedin, Twitter, Send } from 'lucide-vue-next';
 import AButton from '../atoms/AButton.vue';
+import { useSiteBootstrap } from '../../composables/useSiteBootstrap';
 
 const currentYear = new Date().getFullYear();
+const { siteSettings, services } = useSiteBootstrap();
 
-// Environment variables
-const companyName = import.meta.env.VITE_COMPANY_NAME || 'Banua Cloud';
-const companyTagline = import.meta.env.VITE_COMPANY_TAGLINE || 'Nusantara';
-const companyFullName = import.meta.env.VITE_COMPANY_FULL_NAME || 'Banua Cloud Nusantara';
-const supportEmail = import.meta.env.VITE_SUPPORT_EMAIL || 'support@banuacloud.id';
-const companyDescriptor = import.meta.env.VITE_COMPANY_DESCRIPTOR || 'Mitra Solusi IT Terpercaya di Indonesia';
-const supportPhone = import.meta.env.VITE_SUPPORT_PHONE || '+62 812-3456-7890';
-const supportPhoneRaw = import.meta.env.VITE_SUPPORT_PHONE_RAW || '+6281234567890';
+const companyName = computed(() => siteSettings.value.siteName);
+const companyTagline = computed(() => siteSettings.value.siteName);
+const companyFullName = computed(() => siteSettings.value.companyName);
+const supportEmail = computed(() => siteSettings.value.companyEmail);
+const companyDescriptor = computed(() => siteSettings.value.siteDescription);
+const supportPhone = computed(() => siteSettings.value.companyPhone);
+const supportPhoneRaw = computed(() => siteSettings.value.companyPhone.replace(/[^\d+]/g, ''));
 
-// Social links from environment variables
-const socialLinks = [
-  { 
-    icon: Instagram, 
-    href: import.meta.env.VITE_SOCIAL_INSTAGRAM || '#', 
-    label: 'Instagram' 
-  },
-  { 
-    icon: Linkedin, 
-    href: import.meta.env.VITE_SOCIAL_LINKEDIN || '#', 
-    label: 'LinkedIn' 
-  },
-  { 
-    icon: Twitter, 
-    href: import.meta.env.VITE_SOCIAL_TWITTER || '#', 
-    label: 'Twitter' 
-  },
-].filter(link => link.href && link.href !== '#');
+const socialLinks = computed(() => {
+  return [
+    { icon: Instagram, href: siteSettings.value.socialInstagram, label: 'Instagram' },
+    { icon: Linkedin, href: siteSettings.value.socialLinkedin, label: 'LinkedIn' },
+    { icon: Twitter, href: siteSettings.value.socialTwitter, label: 'Twitter' },
+  ].filter((link) => link.href);
+});
 
 const footerLinks = {
-  services: [
-    { name: 'Cloud VPS', href: '#services' },
-    { name: 'Web Hosting', href: '#services' },
-    { name: 'Layanan Domain', href: '#services' },
-    { name: 'Solusi Backup', href: '#services' },
-    { name: 'Pengembangan Aplikasi', href: '#services' },
-    { name: 'Konsultasi IT', href: '#services' },
-  ],
   resources: [
     { name: 'Dokumentasi', href: '#' },
     { name: 'Referensi API', href: '#' },
@@ -58,6 +40,13 @@ const footerLinks = {
 
 const email = ref('');
 const isSubscribed = ref(false);
+
+const serviceLinks = computed(() => {
+  return services.value.map((service) => ({
+    name: service.name,
+    href: '#services',
+  }));
+});
 
 const handleSubscribe = () => {
   if (email.value) {
@@ -86,7 +75,7 @@ const handleSubscribe = () => {
           <p class="text-slate-400 text-sm mb-6">
             {{ companyDescriptor }}
           </p>
-           
+
           <!-- Newsletter -->
           <div>
             <h4 class="text-white font-semibold mb-3">Newsletter</h4>
@@ -106,19 +95,19 @@ const handleSubscribe = () => {
             </p>
           </div>
         </div>
-        
+
         <!-- Services Column -->
         <div>
           <h4 class="text-white font-semibold mb-4">Layanan</h4>
           <ul class="space-y-3">
-            <li v-for="link in footerLinks.services" :key="link.name">
+            <li v-for="link in serviceLinks" :key="link.name">
               <a :href="link.href" class="text-slate-400 hover:text-sky-400 transition-colors text-sm">
                 {{ link.name }}
               </a>
             </li>
           </ul>
         </div>
-        
+
         <!-- Resources Column -->
         <div>
           <h4 class="text-white font-semibold mb-4">Resources</h4>
@@ -130,25 +119,25 @@ const handleSubscribe = () => {
             </li>
           </ul>
         </div>
-        
+
         <!-- Contact Column -->
         <div>
           <h4 class="text-white font-semibold mb-4">Kontak</h4>
           <ul class="space-y-3">
             <li class="flex items-center gap-3 text-slate-400 text-sm">
               <Mail class="w-4 h-4 text-sky-400" />
-              <a :href="`mailto:${supportEmail}`" class="hover:text-sky-400 transition-colors">
+                <a :href="`mailto:${supportEmail}`" class="hover:text-sky-400 transition-colors">
                 {{ supportEmail }}
               </a>
             </li>
             <li class="flex items-center gap-3 text-slate-400 text-sm">
               <Phone class="w-4 h-4 text-sky-400" />
-              <a :href="`tel:${supportPhoneRaw}`" class="hover:text-sky-400 transition-colors">
+                <a :href="`tel:${supportPhoneRaw}`" class="hover:text-sky-400 transition-colors">
                 {{ supportPhone }}
               </a>
             </li>
           </ul>
-          
+
           <!-- Social Links -->
           <div class="flex items-center gap-3 mt-6">
             <a
@@ -163,7 +152,7 @@ const handleSubscribe = () => {
           </div>
         </div>
       </div>
-      
+
       <!-- Bottom Bar -->
       <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
         <p class="text-slate-500 text-sm">

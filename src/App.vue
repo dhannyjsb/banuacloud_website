@@ -1,14 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import Maintenance from './pages/Maintenance.vue';
+import { useSiteSettings } from './composables/useSiteSettings';
 
-const isMaintenanceMode = computed(() => {
-  const val = import.meta.env.VITE_MAINTENANCE_MODE || 'true';
-  return val === 'true' || val === '1';
-});
+const { maintenanceMode } = useSiteSettings();
 </script>
 
 <template>
-  <Maintenance v-if="isMaintenanceMode" />
+  <Maintenance v-if="maintenanceMode" />
   <router-view v-else />
 </template>
