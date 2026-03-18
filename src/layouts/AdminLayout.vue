@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import {
   LayoutDashboard,
   FileText,
   Package,
   Settings,
+  Lock,
   LogOut,
   Menu,
   X,
+  ChevronDown,
   ChevronRight,
   Bell,
   User
@@ -21,6 +23,9 @@ const authStore = useAuthStore();
 
 const isSidebarOpen = ref(true);
 const isMobileMenuOpen = ref(false);
+const isUserMenuOpen = ref(false);
+const userMenuRef = ref<HTMLElement | null>(null);
+const currentYear = new Date().getFullYear();
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
@@ -30,7 +35,26 @@ const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value;
 };
 
+const toggleUserMenu = () => {
+  isUserMenuOpen.value = !isUserMenuOpen.value;
+};
+
+const closeUserMenu = () => {
+  isUserMenuOpen.value = false;
+};
+
+const goToSettings = () => {
+  closeUserMenu();
+  router.push('/admin/settings');
+};
+
+const goToChangePassword = () => {
+  closeUserMenu();
+  router.push('/admin/settings?tab=security');
+};
+
 const handleLogout = async () => {
+  closeUserMenu();
   await authStore.logout();
   router.push('/admin/login');
 };
@@ -59,15 +83,37 @@ const menuItems = [
 ];
 
 const isActiveRoute = (path: string) => {
+  if (path === '/admin') {
+    return route.path === path;
+  }
+
   return route.path === path || route.path.startsWith(path + '/');
 };
 
-const breadcrumbs = computed(() => {
-  const paths = route.path.split('/').filter(Boolean);
-  return paths.map((path, index) => ({
-    name: path.charAt(0).toUpperCase() + path.slice(1),
-    path: '/' + paths.slice(0, index + 1).join('/'),
-  }));
+const handleClickOutside = (event: MouseEvent) => {
+  if (!userMenuRef.value) {
+    return;
+  }
+
+  if (!userMenuRef.value.contains(event.target as Node)) {
+    closeUserMenu();
+  }
+};
+
+const handleEscape = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    closeUserMenu();
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+  document.addEventListener('keydown', handleEscape);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+  document.removeEventListener('keydown', handleEscape);
 });
 </script>
 
@@ -146,29 +192,12 @@ const breadcrumbs = computed(() => {
         </router-link>
       </nav>
 
-      <!-- Logout -->
-      <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
-        <button
-          @click="handleLogout"
-          class="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all duration-200 group"
-        >
-          <LogOut class="w-5 h-5" />
-          <span
-            :class="[
-              'font-medium transition-all duration-300',
-              isSidebarOpen ? 'opacity-100' : 'lg:opacity-0 lg:hidden'
-            ]"
-          >
-            Logout
-          </span>
-        </button>
-      </div>
     </aside>
 
     <!-- Main Content -->
     <div class="flex-1 flex flex-col min-w-0">
       <!-- Header -->
-      <header class="h-16 bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/10 flex items-center px-4 lg:px-8">
+      <header class="relative z-30 h-16 bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/10 flex items-center px-4 lg:px-8">
         <div class="flex items-center gap-4">
           <button
             @click="toggleSidebar"
@@ -182,15 +211,6 @@ const breadcrumbs = computed(() => {
           >
             <Menu class="w-5 h-5" />
           </button>
-
-          <!-- Breadcrumbs -->
-          <nav class="hidden md:flex items-center gap-2 text-sm">
-            <router-link to="/admin" class="text-slate-400 hover:text-white transition-colors">
-              Admin
-            </router-link>
-            <ChevronRight class="w-4 h-4 text-slate-600" />
-            <span class="text-white">{{ breadcrumbs[breadcrumbs.length - 1]?.name }}</span>
-          </nav>
         </div>
 
         <div class="ml-auto flex items-center gap-4">
@@ -201,24 +221,73 @@ const breadcrumbs = computed(() => {
           </button>
 
           <!-- User Menu -->
-          <div class="flex items-center gap-3 pl-4 border-l border-white/10">
-            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
-              <User class="w-4 h-4 text-white" />
-            </div>
-            <div class="hidden md:block">
-              <p class="text-sm font-medium text-white">{{ authStore.user?.name || 'Admin' }}</p>
-              <p class="text-xs text-slate-400">Administrator</p>
+          <div ref="userMenuRef" class="relative z-40 pl-4 border-l border-white/10">
+            <button
+              @click="toggleUserMenu"
+              class="flex items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-white/5"
+              :aria-expanded="isUserMenuOpen"
+              aria-haspopup="menu"
+            >
+              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
+                <User class="w-4 h-4 text-white" />
+              </div>
+              <div class="hidden md:block">
+                <p class="text-sm font-medium text-white">{{ authStore.user?.name || 'Admin' }}</p>
+                <p class="text-xs text-slate-400">Administrator</p>
+              </div>
+              <ChevronDown class="hidden md:block w-4 h-4 text-slate-400 transition-transform" :class="isUserMenuOpen ? 'rotate-180' : ''" />
+            </button>
+
+            <div
+              v-if="isUserMenuOpen"
+              class="absolute right-0 top-full z-50 mt-3 w-56 rounded-2xl border border-white/10 bg-[#0f172a]/95 p-2 shadow-2xl backdrop-blur-xl"
+            >
+              <div class="px-3 py-2 border-b border-white/10">
+                <p class="text-sm font-medium text-white">{{ authStore.user?.name || 'Admin' }}</p>
+                <p class="text-xs text-slate-400">{{ authStore.user?.email || 'admin@banuacloud.com' }}</p>
+              </div>
+
+              <button
+                @click="goToChangePassword"
+                class="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+              >
+                <Lock class="w-4 h-4" />
+                Change Password
+              </button>
+
+              <button
+                @click="goToSettings"
+                class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+              >
+                <Settings class="w-4 h-4" />
+                Settings
+              </button>
+
+              <button
+                @click="handleLogout"
+                class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200"
+              >
+                <LogOut class="w-4 h-4" />
+                Logout
+              </button>
             </div>
           </div>
         </div>
       </header>
 
       <!-- Page Content -->
-      <main class="flex-1 overflow-auto p-4 lg:p-8">
+      <main class="relative z-0 flex-1 overflow-auto p-4 lg:p-8">
         <div class="max-w-7xl mx-auto">
           <router-view />
         </div>
       </main>
+
+      <footer class="border-t border-white/10 bg-[#0f172a]/70 px-4 py-4 backdrop-blur-xl lg:px-8">
+        <div class="mx-auto flex max-w-7xl flex-col gap-2 text-sm text-slate-400 md:flex-row md:items-center md:justify-between">
+          <p>© {{ currentYear }} Banua Cloud Nusantara Admin Panel</p>
+          <p>Infrastructure, Innovation, Impact</p>
+        </div>
+      </footer>
     </div>
   </div>
 </template>

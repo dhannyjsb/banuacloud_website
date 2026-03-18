@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { onMounted, nextTick } from 'vue';
-import { useRouter } from 'vue-router';
-import { 
-  HardDrive, CheckCircle, ArrowRight, Shield, Clock, Cloud, 
-  ArrowLeft, ChevronRight, HeadphonesIcon, RefreshCw, Lock, Server
+import {
+  HardDrive, CheckCircle, ArrowRight, Shield, Clock, Cloud,
+  HeadphonesIcon, RefreshCw, Lock, Server
 } from 'lucide-vue-next';
 import ONavbar from '../../components/organisms/ONavbar.vue';
 import OFooter from '../../components/organisms/OFooter.vue';
@@ -12,7 +11,6 @@ import AGradientText from '../../components/atoms/AGradientText.vue';
 import AGlowOrb from '../../components/atoms/AGlowOrb.vue';
 import { useScrollAnimation } from '../../composables/useIntersectionObserver';
 
-const router = useRouter();
 const { initScrollAnimations } = useScrollAnimation();
 
 const features = [
@@ -111,10 +109,6 @@ const plans = [
   },
 ];
 
-const goBack = () => {
-  router.push('/learn-more');
-};
-
 onMounted(async () => {
   await nextTick();
   initScrollAnimations();
@@ -132,20 +126,8 @@ onMounted(async () => {
     <!-- Navbar -->
     <ONavbar />
 
-    <!-- Breadcrumb -->
-    <div class="container-custom pt-24 pb-4 relative z-10">
-      <nav class="flex items-center gap-2 text-sm text-slate-400">
-        <button @click="goBack" class="hover:text-sky-400 transition-colors flex items-center gap-1">
-          <ArrowLeft class="w-4 h-4" />
-          Semua Layanan
-        </button>
-        <ChevronRight class="w-4 h-4" />
-        <span class="text-white">Solusi Backup</span>
-      </nav>
-    </div>
-
     <!-- Hero Section -->
-    <section class="relative pt-8 pb-16">
+    <section class="relative pt-28 pb-16">
       <div class="container-custom relative z-10">
         <div class="max-w-4xl mx-auto text-center">
           <!-- Badge -->
@@ -153,16 +135,16 @@ onMounted(async () => {
             <HardDrive class="w-4 h-4 text-sky-400" />
             <span class="text-sm text-slate-300">Solusi Backup Data</span>
           </div>
-          
+
           <!-- Title -->
           <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6 animate-fade-in-up delay-100">
             Lindungi Data Bisnis
             <AGradientText>Anda</AGradientText>
           </h1>
-          
+
           <!-- Description -->
           <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-8 leading-relaxed animate-fade-in-up delay-200">
-            Backup otomatis harian dengan restore sekali klik. 
+            Backup otomatis harian dengan restore sekali klik.
             Jamin keamanan data bisnis Anda dengan solusi backup enterprise.
           </p>
 
@@ -193,8 +175,8 @@ onMounted(async () => {
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div 
-            v-for="(feature, index) in features" 
+          <div
+            v-for="(feature, index) in features"
             :key="feature.title"
             class="scroll-animate"
             :style="{ transitionDelay: `${index * 100}ms` }"
@@ -226,13 +208,13 @@ onMounted(async () => {
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <div 
-            v-for="(plan, index) in plans" 
+          <div
+            v-for="(plan, index) in plans"
             :key="plan.name"
             class="scroll-animate"
             :style="{ transitionDelay: `${index * 100}ms` }"
           >
-            <div 
+            <div
               class="glass-md p-8 h-full relative"
               :class="{ 'border-sky-500/50': plan.popular }"
             >
@@ -288,7 +270,7 @@ onMounted(async () => {
       <div class="container-custom">
         <div class="glass-md p-12 md:p-16 text-center max-w-4xl mx-auto relative overflow-hidden">
           <div class="absolute inset-0 bg-gradient-to-r from-sky-500/10 via-cyan-500/10 to-violet-500/10" />
-          
+
           <div class="relative z-10">
             <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
               Amankan Data Sekarang

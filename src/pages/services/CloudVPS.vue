@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { onMounted, nextTick } from 'vue';
-import { useRouter } from 'vue-router';
-import { 
-  Server, CheckCircle, ArrowRight, Shield, Zap, Clock, 
-  HardDrive, Cpu, Globe, ArrowLeft, ChevronRight,
+import {
+  Server, CheckCircle, ArrowRight, Shield, Zap, Clock,
+  HardDrive, Cpu, Globe,
   Terminal, Database, Layers, Lock, RefreshCw, HeadphonesIcon
 } from 'lucide-vue-next';
 import ONavbar from '../../components/organisms/ONavbar.vue';
@@ -13,7 +12,6 @@ import AGradientText from '../../components/atoms/AGradientText.vue';
 import AGlowOrb from '../../components/atoms/AGlowOrb.vue';
 import { useScrollAnimation } from '../../composables/useIntersectionObserver';
 
-const router = useRouter();
 const { initScrollAnimations } = useScrollAnimation();
 
 const features = [
@@ -125,10 +123,6 @@ const operatingSystems = [
   'Windows Server 2022',
 ];
 
-const goBack = () => {
-  router.push('/learn-more');
-};
-
 onMounted(async () => {
   await nextTick();
   initScrollAnimations();
@@ -146,20 +140,8 @@ onMounted(async () => {
     <!-- Navbar -->
     <ONavbar />
 
-    <!-- Breadcrumb -->
-    <div class="container-custom pt-24 pb-4 relative z-10">
-      <nav class="flex items-center gap-2 text-sm text-slate-400">
-        <button @click="goBack" class="hover:text-sky-400 transition-colors flex items-center gap-1">
-          <ArrowLeft class="w-4 h-4" />
-          Semua Layanan
-        </button>
-        <ChevronRight class="w-4 h-4" />
-        <span class="text-white">Cloud VPS</span>
-      </nav>
-    </div>
-
     <!-- Hero Section -->
-    <section class="relative pt-8 pb-16">
+    <section class="relative pt-28 pb-16">
       <div class="container-custom relative z-10">
         <div class="max-w-4xl mx-auto text-center">
           <!-- Badge -->
@@ -167,16 +149,16 @@ onMounted(async () => {
             <Zap class="w-4 h-4 text-sky-400" />
             <span class="text-sm text-slate-300">Server Pribadi Virtual</span>
           </div>
-          
+
           <!-- Title -->
           <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6 animate-fade-in-up delay-100">
             Cloud VPS dengan
             <AGradientText>Performa Tinggi</AGradientText>
           </h1>
-          
+
           <!-- Description -->
           <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-8 leading-relaxed animate-fade-in-up delay-200">
-            Rasakan kontrol penuh atas server Anda dengan sumber daya dedicated, 
+            Rasakan kontrol penuh atas server Anda dengan sumber daya dedicated,
             performa tingkat enterprise, dan harga yang terjangkau.
           </p>
 
@@ -207,8 +189,8 @@ onMounted(async () => {
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div 
-            v-for="(feature, index) in features" 
+          <div
+            v-for="(feature, index) in features"
             :key="feature.title"
             class="scroll-animate"
             :style="{ transitionDelay: `${index * 100}ms` }"
@@ -240,18 +222,18 @@ onMounted(async () => {
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <div 
-            v-for="(plan, index) in plans" 
+          <div
+            v-for="(plan, index) in plans"
             :key="plan.name"
             class="scroll-animate"
             :style="{ transitionDelay: `${index * 100}ms` }"
           >
-            <div 
+            <div
               class="glass-md p-8 h-full relative"
               :class="{ 'border-sky-500/50': plan.popular }"
             >
               <!-- Popular Badge -->
-              <div 
+              <div
                 v-if="plan.popular"
                 class="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-sky-500 to-cyan-500 text-white"
               >
@@ -292,8 +274,8 @@ onMounted(async () => {
 
               <!-- Features -->
               <ul class="space-y-3 mb-8">
-                <li 
-                  v-for="feature in plan.features" 
+                <li
+                  v-for="feature in plan.features"
                   :key="feature"
                   class="flex items-center gap-2 text-sm text-slate-300"
                 >
@@ -302,8 +284,8 @@ onMounted(async () => {
                 </li>
               </ul>
 
-              <AButton 
-                :variant="plan.popular ? 'primary' : 'secondary'" 
+              <AButton
+                :variant="plan.popular ? 'primary' : 'secondary'"
                 class="w-full justify-center"
               >
                 Pilih Paket
@@ -328,8 +310,8 @@ onMounted(async () => {
           </div>
 
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div 
-              v-for="os in operatingSystems" 
+            <div
+              v-for="os in operatingSystems"
               :key="os"
               class="glass-md p-4 text-center hover:border-sky-500/30 transition-colors cursor-pointer"
             >
@@ -347,7 +329,7 @@ onMounted(async () => {
         <div class="glass-md p-12 md:p-16 text-center max-w-4xl mx-auto relative overflow-hidden">
           <!-- Background gradient -->
           <div class="absolute inset-0 bg-gradient-to-r from-sky-500/10 via-cyan-500/10 to-violet-500/10" />
-          
+
           <div class="relative z-10">
             <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
               Siap Memulai?

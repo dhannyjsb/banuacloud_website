@@ -12,6 +12,7 @@ Route::prefix('auth')->group(function (): void {
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/validate', [AuthController::class, 'validateToken']);
+        Route::put('/change-password', [AuthController::class, 'changePassword']);
         Route::post('/logout', [AuthController::class, 'logout']);
     });
 });
@@ -19,6 +20,8 @@ Route::prefix('auth')->group(function (): void {
 Route::prefix('site')->group(function (): void {
     Route::get('/settings', [SiteDataController::class, 'settings']);
     Route::get('/bootstrap', [SiteDataController::class, 'bootstrap']);
+    Route::get('/learn-more', [SiteDataController::class, 'learnMore']);
+    Route::get('/services/{slug}', [SiteDataController::class, 'serviceDetail']);
 });
 
 Route::middleware(['auth:sanctum', 'admin.access'])->prefix('admin')->group(function (): void {

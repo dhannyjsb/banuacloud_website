@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\FeatureItem;
 use App\Models\HeroContent;
+use App\Models\MarketingPage;
 use App\Models\Service;
 use App\Models\SiteSetting;
 use App\Models\Testimonial;
@@ -54,6 +55,26 @@ class SiteDataController extends Controller
                 ->all(),
             'services' => $services->map(fn(Service $service): array => $this->formatService($service))->all(),
         ]);
+    }
+
+    public function learnMore(): JsonResponse
+    {
+        return response()->json(
+            MarketingPage::query()
+                ->where('page_key', 'learn-more')
+                ->firstOrFail()
+                ->payload,
+        );
+    }
+
+    public function serviceDetail(string $slug): JsonResponse
+    {
+        return response()->json(
+            MarketingPage::query()
+                ->where('page_key', "service:{$slug}")
+                ->firstOrFail()
+                ->payload,
+        );
     }
 
     private function formatSettings(): array

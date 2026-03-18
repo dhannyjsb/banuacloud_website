@@ -2,14 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import Home from '../pages/Home.vue';
 import LearnMore from '../pages/LearnMore.vue';
-
-// Service Pages
-import CloudVPS from '../pages/services/CloudVPS.vue';
-import WebHosting from '../pages/services/WebHosting.vue';
-import Domain from '../pages/services/Domain.vue';
-import Backup from '../pages/services/Backup.vue';
-import AppDevelopment from '../pages/services/AppDevelopment.vue';
-import ITConsulting from '../pages/services/ITConsulting.vue';
+import ServiceDetail from '../pages/services/ServiceDetail.vue';
 
 // Admin Pages
 import AdminLogin from '../pages/admin/AdminLogin.vue';
@@ -33,34 +26,9 @@ const publicRoutes = [
   },
   // Service Routes
   {
-    path: '/services/cloud-vps',
-    name: 'CloudVPS',
-    component: CloudVPS,
-  },
-  {
-    path: '/services/web-hosting',
-    name: 'WebHosting',
-    component: WebHosting,
-  },
-  {
-    path: '/services/domain',
-    name: 'Domain',
-    component: Domain,
-  },
-  {
-    path: '/services/backup',
-    name: 'Backup',
-    component: Backup,
-  },
-  {
-    path: '/services/app-development',
-    name: 'AppDevelopment',
-    component: AppDevelopment,
-  },
-  {
-    path: '/services/it-consulting',
-    name: 'ITConsulting',
-    component: ITConsulting,
+    path: '/services/:slug',
+    name: 'ServiceDetail',
+    component: ServiceDetail,
   },
 ];
 

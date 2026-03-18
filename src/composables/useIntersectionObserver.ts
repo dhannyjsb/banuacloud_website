@@ -11,7 +11,7 @@ export function useIntersectionObserver(
   options: UseIntersectionObserverOptions = {}
 ) {
   const { threshold = 0.1, rootMargin = '0px', triggerOnce = true } = options;
-  
+
   const isVisible = ref(false);
   let observer: IntersectionObserver | null = null;
 
@@ -56,12 +56,33 @@ export function useIntersectionObserver(
 export function useScrollAnimation() {
   const isVisible = ref(false);
   let observer: IntersectionObserver | null = null;
+  let mutationObserver: MutationObserver | null = null;
+  const observedElements = new WeakSet<Element>();
+
+  const observeAnimatedElement = (element: Element) => {
+    if (!observer || observedElements.has(element)) {
+      return;
+    }
+
+    observedElements.add(element);
+    observer.observe(element);
+  };
+
+  const observeAnimatedTree = (root: ParentNode) => {
+    root.querySelectorAll('.scroll-animate').forEach((element) => {
+      observeAnimatedElement(element);
+    });
+  };
 
   const initScrollAnimations = () => {
-    // Clean up existing observer if any
     if (observer) {
       observer.disconnect();
       observer = null;
+    }
+
+    if (mutationObserver) {
+      mutationObserver.disconnect();
+      mutationObserver = null;
     }
 
     observer = new IntersectionObserver(
@@ -82,10 +103,27 @@ export function useScrollAnimation() {
       }
     );
 
-    // Observe all scroll-animate elements
-    const animatedElements = document.querySelectorAll('.scroll-animate');
-    animatedElements.forEach((el) => {
-      observer?.observe(el);
+    observeAnimatedTree(document);
+
+    mutationObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (!(node instanceof Element)) {
+            return;
+          }
+
+          if (node.matches('.scroll-animate')) {
+            observeAnimatedElement(node);
+          }
+
+          observeAnimatedTree(node);
+        });
+      });
+    });
+
+    mutationObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
     });
   };
 
@@ -93,6 +131,11 @@ export function useScrollAnimation() {
     if (observer) {
       observer.disconnect();
       observer = null;
+    }
+
+    if (mutationObserver) {
+      mutationObserver.disconnect();
+      mutationObserver = null;
     }
   });
 

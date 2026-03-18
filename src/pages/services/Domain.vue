@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { onMounted, nextTick } from 'vue';
-import { useRouter } from 'vue-router';
-import { 
-  Database, CheckCircle, ArrowRight, Shield, Globe, Lock, 
-  ArrowLeft, ChevronRight, HeadphonesIcon, Search, Star
+import {
+  Database, CheckCircle, ArrowRight, Shield, Globe, Lock,
+  HeadphonesIcon, Search, Star
 } from 'lucide-vue-next';
 import ONavbar from '../../components/organisms/ONavbar.vue';
 import OFooter from '../../components/organisms/OFooter.vue';
@@ -12,7 +11,6 @@ import AGradientText from '../../components/atoms/AGradientText.vue';
 import AGlowOrb from '../../components/atoms/AGlowOrb.vue';
 import { useScrollAnimation } from '../../composables/useIntersectionObserver';
 
-const router = useRouter();
 const { initScrollAnimations } = useScrollAnimation();
 
 const features = [
@@ -59,10 +57,6 @@ const popularDomains = [
   { ext: '.info', price: '79.000', popular: false },
 ];
 
-const goBack = () => {
-  router.push('/learn-more');
-};
-
 onMounted(async () => {
   await nextTick();
   initScrollAnimations();
@@ -80,20 +74,8 @@ onMounted(async () => {
     <!-- Navbar -->
     <ONavbar />
 
-    <!-- Breadcrumb -->
-    <div class="container-custom pt-24 pb-4 relative z-10">
-      <nav class="flex items-center gap-2 text-sm text-slate-400">
-        <button @click="goBack" class="hover:text-violet-400 transition-colors flex items-center gap-1">
-          <ArrowLeft class="w-4 h-4" />
-          Semua Layanan
-        </button>
-        <ChevronRight class="w-4 h-4" />
-        <span class="text-white">Layanan Domain</span>
-      </nav>
-    </div>
-
     <!-- Hero Section -->
-    <section class="relative pt-8 pb-16">
+    <section class="relative pt-28 pb-16">
       <div class="container-custom relative z-10">
         <div class="max-w-4xl mx-auto text-center">
           <!-- Badge -->
@@ -101,16 +83,16 @@ onMounted(async () => {
             <Globe class="w-4 h-4 text-violet-400" />
             <span class="text-sm text-slate-300">Registrasi Domain</span>
           </div>
-          
+
           <!-- Title -->
           <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6 animate-fade-in-up delay-100">
             Dapatkan Domain
             <AGradientText>Impian Anda</AGradientText>
           </h1>
-          
+
           <!-- Description -->
           <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-8 leading-relaxed animate-fade-in-up delay-200">
-            Mulai perjalanan online Anda dengan domain yang tepat. 
+            Mulai perjalanan online Anda dengan domain yang tepat.
             Harga terjangkau dengan fitur lengkap.
           </p>
 
@@ -141,13 +123,13 @@ onMounted(async () => {
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-          <div 
-            v-for="(domain, index) in popularDomains" 
+          <div
+            v-for="(domain, index) in popularDomains"
             :key="domain.ext"
             class="scroll-animate"
             :style="{ transitionDelay: `${index * 50}ms` }"
           >
-            <div 
+            <div
               class="glass-md p-6 text-center hover:border-violet-500/30 transition-colors cursor-pointer"
               :class="{ 'border-violet-500/30': domain.popular }"
             >
@@ -175,8 +157,8 @@ onMounted(async () => {
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div 
-            v-for="(feature, index) in features" 
+          <div
+            v-for="(feature, index) in features"
             :key="feature.title"
             class="scroll-animate"
             :style="{ transitionDelay: `${index * 100}ms` }"
@@ -200,7 +182,7 @@ onMounted(async () => {
       <div class="container-custom">
         <div class="glass-md p-12 md:p-16 text-center max-w-4xl mx-auto relative overflow-hidden">
           <div class="absolute inset-0 bg-gradient-to-r from-violet-500/10 via-purple-500/10 to-sky-500/10" />
-          
+
           <div class="relative z-10">
             <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
               Domain Ready Untuk Online

@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { onMounted, nextTick } from 'vue';
-import { useRouter } from 'vue-router';
-import { 
-  Code, CheckCircle, ArrowRight, Palette, Smartphone, Globe, 
-  ArrowLeft, ChevronRight, HeadphonesIcon, Layout, Server, Lightbulb
+import {
+  Code, CheckCircle, ArrowRight, Palette, Smartphone, Globe,
+  HeadphonesIcon, Layout, Server, Lightbulb
 } from 'lucide-vue-next';
 import ONavbar from '../../components/organisms/ONavbar.vue';
 import OFooter from '../../components/organisms/OFooter.vue';
@@ -12,7 +11,6 @@ import AGradientText from '../../components/atoms/AGradientText.vue';
 import AGlowOrb from '../../components/atoms/AGlowOrb.vue';
 import { useScrollAnimation } from '../../composables/useIntersectionObserver';
 
-const router = useRouter();
 const { initScrollAnimations } = useScrollAnimation();
 
 const services = [
@@ -75,10 +73,6 @@ const process = [
   },
 ];
 
-const goBack = () => {
-  router.push('/learn-more');
-};
-
 onMounted(async () => {
   await nextTick();
   initScrollAnimations();
@@ -96,20 +90,8 @@ onMounted(async () => {
     <!-- Navbar -->
     <ONavbar />
 
-    <!-- Breadcrumb -->
-    <div class="container-custom pt-24 pb-4 relative z-10">
-      <nav class="flex items-center gap-2 text-sm text-slate-400">
-        <button @click="goBack" class="hover:text-violet-400 transition-colors flex items-center gap-1">
-          <ArrowLeft class="w-4 h-4" />
-          Semua Layanan
-        </button>
-        <ChevronRight class="w-4 h-4" />
-        <span class="text-white">Pengembangan Aplikasi</span>
-      </nav>
-    </div>
-
     <!-- Hero Section -->
-    <section class="relative pt-8 pb-16">
+    <section class="relative pt-28 pb-16">
       <div class="container-custom relative z-10">
         <div class="max-w-4xl mx-auto text-center">
           <!-- Badge -->
@@ -117,16 +99,16 @@ onMounted(async () => {
             <Code class="w-4 h-4 text-violet-400" />
             <span class="text-sm text-slate-300">App Development</span>
           </div>
-          
+
           <!-- Title -->
           <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6 animate-fade-in-up delay-100">
             Wujudkan Aplikasi
             <AGradientText>Impian Anda</AGradientText>
           </h1>
-          
+
           <!-- Description -->
           <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-8 leading-relaxed animate-fade-in-up delay-200">
-            Tim pengembang profesional siap membangun aplikasi web dan mobile 
+            Tim pengembang profesional siap membangun aplikasi web dan mobile
             yang responsif, modern, dan berkinerja tinggi.
           </p>
 
@@ -157,8 +139,8 @@ onMounted(async () => {
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div 
-            v-for="(service, index) in services" 
+          <div
+            v-for="(service, index) in services"
             :key="service.title"
             class="scroll-animate"
             :style="{ transitionDelay: `${index * 100}ms` }"
@@ -172,8 +154,8 @@ onMounted(async () => {
                   <h3 class="text-xl font-semibold text-white mb-2">{{ service.title }}</h3>
                   <p class="text-slate-400 text-sm mb-4">{{ service.description }}</p>
                   <div class="flex flex-wrap gap-2">
-                    <span 
-                      v-for="tech in service.technologies" 
+                    <span
+                      v-for="tech in service.technologies"
                       :key="tech"
                       class="px-3 py-1 rounded-full text-xs bg-violet-500/10 text-violet-300 border border-violet-500/20"
                     >
@@ -201,8 +183,8 @@ onMounted(async () => {
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div 
-            v-for="(step, index) in process" 
+          <div
+            v-for="(step, index) in process"
             :key="step.step"
             class="scroll-animate"
             :style="{ transitionDelay: `${index * 100}ms` }"
@@ -224,7 +206,7 @@ onMounted(async () => {
       <div class="container-custom">
         <div class="glass-md p-12 md:p-16 text-center max-w-4xl mx-auto relative overflow-hidden">
           <div class="absolute inset-0 bg-gradient-to-r from-violet-500/10 via-sky-500/10 to-cyan-500/10" />
-          
+
           <div class="relative z-10">
             <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
               Mulai Proyek Anda

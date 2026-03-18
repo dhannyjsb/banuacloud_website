@@ -37,7 +37,7 @@ const headlineParts = computed(() => {
 </script>
 
 <template>
-  <section id="home" class="relative min-h-screen flex items-center pt-20 overflow-hidden">
+  <section id="home" class="relative overflow-hidden pt-28 pb-16 md:pt-32 md:pb-20">
     <!-- Background gradient -->
     <div class="absolute inset-0 bg-gradient-to-b from-sky-500/5 via-transparent to-transparent" />
 
@@ -90,11 +90,5 @@ const headlineParts = computed(() => {
       </div>
     </div>
 
-    <!-- Scroll indicator -->
-    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-      <div class="w-6 h-10 rounded-full border-2 border-white/20 flex items-start justify-center p-2">
-        <div class="w-1.5 h-3 bg-white/50 rounded-full animate-particle" />
-      </div>
-    </div>
   </section>
 </template>

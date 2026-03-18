@@ -18,6 +18,12 @@ export interface SiteSettings {
   sessionTimeout: number;
 }
 
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+  newPasswordConfirmation: string;
+}
+
 export interface HeroContent {
   title: string;
   subtitle: string;
@@ -75,6 +81,117 @@ export interface SiteBootstrap {
   features: FeatureItem[];
   testimonials: TestimonialItem[];
   services: SiteService[];
+}
+
+export interface MarketingStat {
+  icon: string;
+  value: string;
+  label: string;
+}
+
+export interface MarketingReason {
+  icon: string;
+  title: string;
+  description: string;
+}
+
+export interface MarketingFaq {
+  question: string;
+  answer: string;
+}
+
+export interface LearnMoreServiceCard {
+  slug: string;
+  icon: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  features: string[];
+  gradient: string;
+}
+
+export interface LearnMorePageData {
+  heroBadge: string;
+  heroTitlePrefix: string;
+  heroTitleHighlight: string;
+  heroDescription: string;
+  stats: MarketingStat[];
+  serviceSectionBadge: string;
+  serviceSectionTitle: string;
+  serviceSectionDescription: string;
+  services: LearnMoreServiceCard[];
+  reasonsBadge: string;
+  reasonsTitle: string;
+  reasonsDescription: string;
+  reasons: MarketingReason[];
+  faqBadge: string;
+  faqTitle: string;
+  faqDescription: string;
+  faqs: MarketingFaq[];
+  ctaTitle: string;
+  ctaDescription: string;
+  ctaPrimary: string;
+  ctaSecondary: string;
+}
+
+export interface ServicePricingCard {
+  name: string;
+  price: string;
+  period: string;
+  specs: Record<string, string>;
+  features: string[];
+  popular: boolean;
+  color: string;
+}
+
+export interface ServiceFeatureCard {
+  icon: string;
+  title: string;
+  description: string;
+  tags?: string[];
+}
+
+export interface ServiceExtraItem {
+  label?: string;
+  text?: string;
+  title?: string;
+  description?: string;
+  step?: string;
+  price?: string;
+  suffix?: string;
+  popular?: boolean;
+}
+
+export interface ServiceExtraSection {
+  type: 'badge-grid' | 'timeline-grid' | 'checklist' | 'price-grid';
+  title: string;
+  description: string;
+  items: ServiceExtraItem[];
+}
+
+export interface ServiceDetailPageData {
+  slug: string;
+  name: string;
+  accent: string;
+  icon: string;
+  breadcrumbLabel: string;
+  heroBadge: string;
+  heroTitlePrefix: string;
+  heroTitleHighlight: string;
+  heroDescription: string;
+  heroPrimaryCta: string;
+  heroSecondaryCta: string;
+  featureSectionTitle: string;
+  featureSectionDescription: string;
+  features: ServiceFeatureCard[];
+  pricingTitle?: string;
+  pricingDescription?: string;
+  pricingCards?: ServicePricingCard[];
+  extraSection?: ServiceExtraSection;
+  ctaTitle: string;
+  ctaDescription: string;
+  ctaPrimary: string;
+  ctaSecondary: string;
 }
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
@@ -289,10 +406,32 @@ function authHeaders(token?: string): HeadersInit {
   };
 }
 
+function redirectToAdminLoginForUnauthorized() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const { pathname, search } = window.location;
+
+  if (!pathname.startsWith('/admin') || pathname.startsWith('/admin/login')) {
+    return;
+  }
+
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem('admin_user');
+
+  const redirectTarget = `${pathname}${search}`;
+  window.location.replace(`/admin/login?redirect=${encodeURIComponent(redirectTarget)}`);
+}
+
 async function parseResponse<T>(response: Response): Promise<T> {
   const payload = (await response.json().catch(() => null)) as { message?: string } | null;
 
   if (!response.ok) {
+    if (response.status === 401) {
+      redirectToAdminLoginForUnauthorized();
+    }
+
     throw new Error(payload?.message || 'Request failed.');
   }
 
@@ -323,6 +462,22 @@ export async function fetchSiteSettingsFromApi(): Promise<SiteSettings> {
   );
 
   return payload.settings || cloneData(defaultSiteSettings);
+}
+
+export async function fetchLearnMorePageFromApi(): Promise<LearnMorePageData> {
+  return parseResponse<LearnMorePageData>(
+    await fetch(`${API_BASE_URL}/site/learn-more`, {
+      headers: authHeaders(),
+    }),
+  );
+}
+
+export async function fetchServiceDetailPageFromApi(slug: string): Promise<ServiceDetailPageData> {
+  return parseResponse<ServiceDetailPageData>(
+    await fetch(`${API_BASE_URL}/site/services/${slug}`, {
+      headers: authHeaders(),
+    }),
+  );
 }
 
 export async function fetchAdminContent(token: string) {
@@ -378,6 +533,20 @@ export async function updateAdminSettings(token: string, payload: { settings: Si
       method: 'PUT',
       headers: authHeaders(token),
       body: JSON.stringify(payload.settings),
+    }),
+  );
+}
+
+export async function updateAdminPassword(token: string, payload: ChangePasswordPayload) {
+  return parseResponse<{ message: string }>(
+    await fetch(`${API_BASE_URL}/auth/change-password`, {
+      method: 'PUT',
+      headers: authHeaders(token),
+      body: JSON.stringify({
+        currentPassword: payload.currentPassword,
+        newPassword: payload.newPassword,
+        newPassword_confirmation: payload.newPasswordConfirmation,
+      }),
     }),
   );
 }

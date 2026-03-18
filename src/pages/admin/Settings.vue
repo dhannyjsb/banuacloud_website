@@ -1,23 +1,42 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { onMounted, reactive, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { Save, Shield, Globe, Mail, Phone, MapPin, Bell, Lock } from 'lucide-vue-next';
 import { emitSiteSettingsUpdated } from '../../composables/useSiteSettings';
 import {
   defaultSiteSettings,
   fetchAdminSettings,
+  updateAdminPassword,
   type SiteSettings,
   updateAdminSettings,
 } from '../../lib/siteApi';
 import { useAuthStore } from '../../stores/auth';
 
+const route = useRoute();
 const isSaving = ref(false);
 const isLoading = ref(false);
 const showSuccess = ref(false);
 const activeTab = ref('general');
 const errorMessage = ref('');
+const passwordErrorMessage = ref('');
+const passwordSuccessMessage = ref('');
+const isUpdatingPassword = ref(false);
 const authStore = useAuthStore();
 
 const settings = reactive<SiteSettings>({ ...defaultSiteSettings });
+const passwordForm = reactive({
+  currentPassword: '',
+  newPassword: '',
+  newPasswordConfirmation: '',
+});
+
+const tabs = [
+  { id: 'general', name: 'General', icon: Globe },
+  { id: 'company', name: 'Company', icon: MapPin },
+  { id: 'social', name: 'Social Media', icon: Globe },
+  { id: 'notifications', name: 'Notifications', icon: Bell },
+  { id: 'security', name: 'Security', icon: Lock },
+];
 
 const loadSettings = async () => {
   isLoading.value = true;
@@ -42,6 +61,16 @@ const loadSettings = async () => {
 onMounted(() => {
   void loadSettings();
 });
+
+watch(
+  () => route.query.tab,
+  (tab) => {
+    if (typeof tab === 'string' && tabs.some((item) => item.id === tab)) {
+      activeTab.value = tab;
+    }
+  },
+  { immediate: true },
+);
 
 const handleSave = async () => {
   isSaving.value = true;
@@ -80,13 +109,43 @@ const resetSettings = () => {
   }
 };
 
-const tabs = [
-  { id: 'general', name: 'General', icon: Globe },
-  { id: 'company', name: 'Company', icon: MapPin },
-  { id: 'social', name: 'Social Media', icon: Globe },
-  { id: 'notifications', name: 'Notifications', icon: Bell },
-  { id: 'security', name: 'Security', icon: Lock },
-];
+const resetPasswordForm = () => {
+  passwordForm.currentPassword = '';
+  passwordForm.newPassword = '';
+  passwordForm.newPasswordConfirmation = '';
+};
+
+const handleChangePassword = async () => {
+  isUpdatingPassword.value = true;
+  passwordErrorMessage.value = '';
+  passwordSuccessMessage.value = '';
+
+  try {
+    await authStore.ensureAuthState();
+
+    if (!authStore.token) {
+      throw new Error('Admin session not found. Please sign in again.');
+    }
+
+    if (passwordForm.newPassword !== passwordForm.newPasswordConfirmation) {
+      throw new Error('New password confirmation does not match.');
+    }
+
+    const payload = await updateAdminPassword(authStore.token, {
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword,
+      newPasswordConfirmation: passwordForm.newPasswordConfirmation,
+    });
+
+    passwordSuccessMessage.value = payload.message;
+    resetPasswordForm();
+  } catch (error) {
+    passwordErrorMessage.value = error instanceof Error ? error.message : 'Failed to update password.';
+  } finally {
+    isUpdatingPassword.value = false;
+  }
+};
+
 </script>
 
 <template>
@@ -412,6 +471,71 @@ const tabs = [
               class="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-sky-500"
             />
             <p class="text-xs text-slate-500">User will be logged out after this period of inactivity</p>
+          </div>
+
+          <div class="rounded-xl border border-white/10 bg-white/5 p-5 space-y-4">
+            <div>
+              <h4 class="text-base font-semibold text-white">Change Password</h4>
+              <p class="text-sm text-slate-400 mt-1">Update your admin password securely.</p>
+            </div>
+
+            <div
+              v-if="passwordSuccessMessage"
+              class="rounded-lg border border-green-500/20 bg-green-500/10 px-4 py-3 text-sm text-green-400"
+            >
+              {{ passwordSuccessMessage }}
+            </div>
+
+            <div
+              v-if="passwordErrorMessage"
+              class="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400"
+            >
+              {{ passwordErrorMessage }}
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="space-y-2 md:col-span-2">
+                <label class="text-sm font-medium text-slate-300">Current Password</label>
+                <input
+                  v-model="passwordForm.currentPassword"
+                  type="password"
+                  autocomplete="current-password"
+                  class="w-full px-4 py-3 rounded-lg bg-[#0b1120] border border-white/10 text-white focus:outline-none focus:border-sky-500"
+                />
+              </div>
+
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-slate-300">New Password</label>
+                <input
+                  v-model="passwordForm.newPassword"
+                  type="password"
+                  autocomplete="new-password"
+                  class="w-full px-4 py-3 rounded-lg bg-[#0b1120] border border-white/10 text-white focus:outline-none focus:border-sky-500"
+                />
+                <p class="text-xs text-slate-500">Use at least 8 characters.</p>
+              </div>
+
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-slate-300">Confirm New Password</label>
+                <input
+                  v-model="passwordForm.newPasswordConfirmation"
+                  type="password"
+                  autocomplete="new-password"
+                  class="w-full px-4 py-3 rounded-lg bg-[#0b1120] border border-white/10 text-white focus:outline-none focus:border-sky-500"
+                />
+              </div>
+            </div>
+
+            <div class="flex justify-end">
+              <button
+                @click="handleChangePassword"
+                :disabled="isUpdatingPassword"
+                class="inline-flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-sky-600 disabled:opacity-50"
+              >
+                <Lock class="w-4 h-4" />
+                {{ isUpdatingPassword ? 'Updating...' : 'Change Password' }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
