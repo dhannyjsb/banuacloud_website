@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<Props>(), {
 const classes = computed(() => {
   // Base glass effect
   const base = 'glass-md';
-  
+
   // Padding classes
   const paddingClasses = {
     none: '',
@@ -24,17 +24,17 @@ const classes = computed(() => {
     md: 'p-6',
     lg: 'p-8',
   };
-  
+
   // Hover classes
-  const hoverClasses = props.hover 
-    ? 'hover:-translate-y-2 hover:shadow-xl hover:shadow-sky-500/10 transition-all duration-300 cursor-pointer' 
+  const hoverClasses = props.hover
+    ? 'hover:-translate-y-1.5 hover:border-sky-400/20 hover:bg-white/[0.07] hover:shadow-[0_28px_70px_rgba(14,165,233,0.12)] transition-all duration-300 cursor-pointer'
     : '';
-  
+
   // Glow classes
   const glowClasses = props.glow
-    ? 'hover:shadow-lg hover:shadow-sky-500/20'
+    ? 'hover:shadow-[0_24px_70px_rgba(34,211,238,0.16)]'
     : '';
-  
+
   return `${base} ${paddingClasses[props.padding]} ${hoverClasses} ${glowClasses}`;
 });
 </script>

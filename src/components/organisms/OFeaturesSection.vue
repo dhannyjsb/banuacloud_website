@@ -7,23 +7,25 @@ const { features } = useSiteBootstrap();
 </script>
 
 <template>
-  <section class="section-py relative">
-    <div class="container-custom">
+  <section id="advantages" class="section-py relative">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_40%)]" />
+
+    <div class="container-custom relative z-10">
       <!-- Section Header -->
-      <div class="text-center max-w-2xl mx-auto mb-16">
-        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-6">
-          <span class="text-sm text-sky-400 font-medium">Mengapa Memilih Kami</span>
+      <div class="mx-auto mb-16 max-w-3xl text-center md:mb-20">
+        <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-sky-400/15 bg-sky-500/10 px-4 py-2">
+          <span class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">Mengapa Memilih Kami</span>
         </div>
-        <h2 class="text-3xl md:text-4xl font-bold text-white mb-4">
-          Dibangun untuk <span class="gradient-text">Performa</span>
+        <h2 class="mb-5 text-3xl md:text-5xl font-bold text-white">
+          Dibangun untuk <span class="gradient-text">performa nyata</span>
         </h2>
-        <p class="text-slate-400 text-lg">
+        <p class="text-lg leading-8 text-slate-400">
           Semuanya yang Anda butuhkan untuk membangun, mendeploy, dan menskalakan aplikasi dengan percaya diri.
         </p>
       </div>
 
       <!-- Features Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         <div
           v-for="(feature, index) in features"
           :key="feature.id"

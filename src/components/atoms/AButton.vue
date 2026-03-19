@@ -22,22 +22,22 @@ const emit = defineEmits<{
 }>();
 
 const classes = computed(() => {
-  const base = 'inline-flex items-center justify-center font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0a0f1a] disabled:opacity-50 disabled:cursor-not-allowed';
-  
+  const base = 'group relative inline-flex items-center justify-center gap-2 overflow-hidden font-semibold tracking-[-0.015em] transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0a0f1a] disabled:opacity-50 disabled:cursor-not-allowed';
+
   // Size classes
   const sizeClasses = {
-    sm: 'px-4 py-2 text-sm rounded-lg',
-    md: 'px-6 py-3 text-base rounded-xl',
-    lg: 'px-8 py-4 text-lg rounded-xl',
+    sm: 'px-4 py-2.5 text-sm rounded-xl',
+    md: 'px-6 py-3.5 text-sm md:text-base rounded-2xl',
+    lg: 'px-7 py-4 text-base md:text-lg rounded-2xl',
   };
-  
+
   // Variant classes
   const variantClasses = {
-    primary: 'bg-gradient-to-r from-sky-500 to-cyan-500 text-white hover:from-sky-400 hover:to-cyan-400 focus:ring-sky-500 shadow-lg shadow-sky-500/25 hover:shadow-sky-500/40',
-    secondary: 'glass text-white hover:bg-white/10 border border-white/20 focus:ring-white/30',
-    ghost: 'text-white hover:bg-white/10 focus:ring-white/30',
+    primary: 'bg-[linear-gradient(135deg,#38bdf8_0%,#22d3ee_55%,#7dd3fc_100%)] text-slate-950 hover:-translate-y-0.5 hover:shadow-[0_18px_45px_rgba(34,211,238,0.25)] focus:ring-sky-400/60',
+    secondary: 'border border-white/12 bg-white/[0.04] text-white hover:-translate-y-0.5 hover:border-sky-400/30 hover:bg-white/[0.08] focus:ring-white/30',
+    ghost: 'text-white hover:bg-white/[0.06] focus:ring-white/30',
   };
-  
+
   return `${base} ${sizeClasses[props.size]} ${variantClasses[props.variant]}`;
 });
 
@@ -77,7 +77,7 @@ const handleClick = (event: MouseEvent) => {
         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
       />
     </svg>
-    
+
     <!-- Slot for button content -->
     <slot />
   </button>

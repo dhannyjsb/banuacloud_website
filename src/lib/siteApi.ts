@@ -132,6 +132,18 @@ export interface LearnMorePageData {
   ctaDescription: string;
   ctaPrimary: string;
   ctaSecondary: string;
+  ctaPrimaryTarget: string;
+  ctaSecondaryTarget: string;
+}
+
+export interface AdminMarketingCtaConfig {
+  pageKey: string;
+  pageTitle: string;
+  supportsHeroCtas: boolean;
+  heroPrimaryTarget: string;
+  heroSecondaryTarget: string;
+  ctaPrimaryTarget: string;
+  ctaSecondaryTarget: string;
 }
 
 export interface ServicePricingCard {
@@ -181,6 +193,8 @@ export interface ServiceDetailPageData {
   heroDescription: string;
   heroPrimaryCta: string;
   heroSecondaryCta: string;
+  heroPrimaryTarget: string;
+  heroSecondaryTarget: string;
   featureSectionTitle: string;
   featureSectionDescription: string;
   features: ServiceFeatureCard[];
@@ -192,6 +206,15 @@ export interface ServiceDetailPageData {
   ctaDescription: string;
   ctaPrimary: string;
   ctaSecondary: string;
+  ctaPrimaryTarget: string;
+  ctaSecondaryTarget: string;
+}
+
+export interface AdminContentPayload {
+  heroContent: HeroContent;
+  features: FeatureItem[];
+  testimonials: TestimonialItem[];
+  marketingCtas: AdminMarketingCtaConfig[];
 }
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
@@ -199,7 +222,7 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$
 export const defaultSiteSettings: SiteSettings = {
   maintenanceMode: import.meta.env.VITE_MAINTENANCE_MODE === 'true',
   siteName: import.meta.env.VITE_COMPANY_NAME || 'Banua Cloud Nusantara',
-  siteDescription: import.meta.env.VITE_COMPANY_DESCRIPTOR || 'Trusted IT Solutions Partner in Indonesia',
+  siteDescription: import.meta.env.VITE_COMPANY_DESCRIPTOR || 'Mitra solusi IT tepercaya di Indonesia',
   companyName: import.meta.env.VITE_COMPANY_FULL_NAME || 'Banua Cloud Nusantara',
   companyEmail: import.meta.env.VITE_SUPPORT_EMAIL || 'support@banuacloud.id',
   companyPhone: import.meta.env.VITE_SUPPORT_PHONE || '+62 812-3456-7890',
@@ -481,7 +504,7 @@ export async function fetchServiceDetailPageFromApi(slug: string): Promise<Servi
 }
 
 export async function fetchAdminContent(token: string) {
-  return parseResponse<{ heroContent: HeroContent; features: FeatureItem[]; testimonials: TestimonialItem[] }>(
+  return parseResponse<AdminContentPayload>(
     await fetch(`${API_BASE_URL}/admin/content`, {
       headers: authHeaders(token),
     }),
@@ -490,9 +513,9 @@ export async function fetchAdminContent(token: string) {
 
 export async function updateAdminContent(
   token: string,
-  payload: { heroContent: HeroContent; features: FeatureItem[]; testimonials: TestimonialItem[] },
+  payload: AdminContentPayload,
 ) {
-  return parseResponse<{ heroContent: HeroContent; features: FeatureItem[]; testimonials: TestimonialItem[] }>(
+  return parseResponse<AdminContentPayload>(
     await fetch(`${API_BASE_URL}/admin/content`, {
       method: 'PUT',
       headers: authHeaders(token),

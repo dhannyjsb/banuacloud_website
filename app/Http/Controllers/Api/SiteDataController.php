@@ -60,21 +60,41 @@ class SiteDataController extends Controller
     public function learnMore(): JsonResponse
     {
         return response()->json(
-            MarketingPage::query()
-                ->where('page_key', 'learn-more')
-                ->firstOrFail()
-                ->payload,
+            $this->marketingPayload('learn-more'),
         );
     }
 
     public function serviceDetail(string $slug): JsonResponse
     {
         return response()->json(
-            MarketingPage::query()
-                ->where('page_key', "service:{$slug}")
-                ->firstOrFail()
-                ->payload,
+            $this->marketingPayload("service:{$slug}"),
         );
+    }
+
+    private function marketingPayload(string $pageKey): array
+    {
+        $page = MarketingPage::query()
+            ->where('page_key', $pageKey)
+            ->firstOrFail();
+
+        return array_merge($this->marketingCtaDefaults($pageKey), $page->payload ?? []);
+    }
+
+    private function marketingCtaDefaults(string $pageKey): array
+    {
+        if ($pageKey === 'learn-more') {
+            return [
+                'ctaPrimaryTarget' => '/services/cloud-vps',
+                'ctaSecondaryTarget' => '#contact',
+            ];
+        }
+
+        return [
+            'heroPrimaryTarget' => '#service-contact',
+            'heroSecondaryTarget' => '#service-extra',
+            'ctaPrimaryTarget' => '#service-contact',
+            'ctaSecondaryTarget' => '#contact',
+        ];
     }
 
     private function formatSettings(): array
@@ -85,7 +105,7 @@ class SiteDataController extends Controller
             return [
                 'maintenanceMode' => false,
                 'siteName' => 'Banua Cloud',
-                'siteDescription' => 'Trusted IT Solutions Partner in Indonesia',
+                'siteDescription' => 'Mitra solusi IT tepercaya di Indonesia',
                 'companyName' => 'PT Banua Cloud Teknologi',
                 'companyEmail' => 'support@banuacloud.id',
                 'companyPhone' => '+62 812-3456-7890',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\FeatureItem;
 use App\Models\HeroContent;
+use App\Models\MarketingPage;
 use App\Models\Testimonial;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,6 +35,12 @@ class ContentController extends Controller
             'testimonials.*.company' => ['required', 'string', 'max:255'],
             'testimonials.*.content' => ['required', 'string', 'max:1000'],
             'testimonials.*.avatar' => ['nullable', 'string', 'max:255'],
+            'marketingCtas' => ['present', 'array'],
+            'marketingCtas.*.pageKey' => ['required', 'string', 'max:255'],
+            'marketingCtas.*.heroPrimaryTarget' => ['nullable', 'string', 'max:255'],
+            'marketingCtas.*.heroSecondaryTarget' => ['nullable', 'string', 'max:255'],
+            'marketingCtas.*.ctaPrimaryTarget' => ['required', 'string', 'max:255'],
+            'marketingCtas.*.ctaSecondaryTarget' => ['required', 'string', 'max:255'],
         ]);
 
         DB::transaction(function () use ($data): void {
@@ -71,6 +78,23 @@ class ContentController extends Controller
                     'avatar' => $testimonial['avatar'] ?? null,
                     'sort_order' => $index,
                 ]);
+            }
+
+            foreach ($data['marketingCtas'] as $marketingCta) {
+                $page = MarketingPage::query()->where('page_key', $marketingCta['pageKey'])->first();
+
+                if (! $page) {
+                    continue;
+                }
+
+                $payload = $page->payload ?? [];
+                $payload['heroPrimaryTarget'] = $marketingCta['heroPrimaryTarget'] ?? '';
+                $payload['heroSecondaryTarget'] = $marketingCta['heroSecondaryTarget'] ?? '';
+                $payload['ctaPrimaryTarget'] = $marketingCta['ctaPrimaryTarget'];
+                $payload['ctaSecondaryTarget'] = $marketingCta['ctaSecondaryTarget'];
+
+                $page->payload = $payload;
+                $page->save();
             }
         });
 
@@ -110,6 +134,91 @@ class ContentController extends Controller
                     'avatar' => $testimonial->avatar,
                 ])
                 ->all(),
+            'marketingCtas' => $this->marketingCtaPayload(),
         ];
+    }
+
+    private function marketingCtaPayload(): array
+    {
+        $defaults = [
+            'learn-more' => [
+                'pageTitle' => 'Learn More',
+                'supportsHeroCtas' => false,
+                'heroPrimaryTarget' => '',
+                'heroSecondaryTarget' => '',
+                'ctaPrimaryTarget' => '/services/cloud-vps',
+                'ctaSecondaryTarget' => '#contact',
+            ],
+            'service:cloud-vps' => [
+                'pageTitle' => 'Cloud VPS',
+                'supportsHeroCtas' => true,
+                'heroPrimaryTarget' => '#service-contact',
+                'heroSecondaryTarget' => '#service-pricing',
+                'ctaPrimaryTarget' => '#service-contact',
+                'ctaSecondaryTarget' => '#contact',
+            ],
+            'service:web-hosting' => [
+                'pageTitle' => 'Web Hosting',
+                'supportsHeroCtas' => true,
+                'heroPrimaryTarget' => '#service-contact',
+                'heroSecondaryTarget' => '#service-pricing',
+                'ctaPrimaryTarget' => '#service-contact',
+                'ctaSecondaryTarget' => '#contact',
+            ],
+            'service:domain' => [
+                'pageTitle' => 'Layanan Domain',
+                'supportsHeroCtas' => true,
+                'heroPrimaryTarget' => '#service-extra',
+                'heroSecondaryTarget' => '#service-contact',
+                'ctaPrimaryTarget' => '#service-contact',
+                'ctaSecondaryTarget' => '#contact',
+            ],
+            'service:backup' => [
+                'pageTitle' => 'Solusi Backup',
+                'supportsHeroCtas' => true,
+                'heroPrimaryTarget' => '#service-contact',
+                'heroSecondaryTarget' => '#service-pricing',
+                'ctaPrimaryTarget' => '#service-contact',
+                'ctaSecondaryTarget' => '#contact',
+            ],
+            'service:app-development' => [
+                'pageTitle' => 'Pengembangan Aplikasi',
+                'supportsHeroCtas' => true,
+                'heroPrimaryTarget' => '#service-contact',
+                'heroSecondaryTarget' => '#service-extra',
+                'ctaPrimaryTarget' => '#service-contact',
+                'ctaSecondaryTarget' => '#contact',
+            ],
+            'service:it-consulting' => [
+                'pageTitle' => 'Konsultasi IT',
+                'supportsHeroCtas' => true,
+                'heroPrimaryTarget' => '#service-contact',
+                'heroSecondaryTarget' => '#service-extra',
+                'ctaPrimaryTarget' => '#service-contact',
+                'ctaSecondaryTarget' => '#contact',
+            ],
+        ];
+
+        $pages = MarketingPage::query()
+            ->whereIn('page_key', array_keys($defaults))
+            ->get()
+            ->keyBy('page_key');
+
+        return collect($defaults)
+            ->map(function (array $default, string $pageKey) use ($pages): array {
+                $payload = $pages->get($pageKey)?->payload ?? [];
+
+                return [
+                    'pageKey' => $pageKey,
+                    'pageTitle' => $default['pageTitle'],
+                    'supportsHeroCtas' => $default['supportsHeroCtas'],
+                    'heroPrimaryTarget' => $payload['heroPrimaryTarget'] ?? $default['heroPrimaryTarget'],
+                    'heroSecondaryTarget' => $payload['heroSecondaryTarget'] ?? $default['heroSecondaryTarget'],
+                    'ctaPrimaryTarget' => $payload['ctaPrimaryTarget'] ?? $default['ctaPrimaryTarget'],
+                    'ctaSecondaryTarget' => $payload['ctaSecondaryTarget'] ?? $default['ctaSecondaryTarget'],
+                ];
+            })
+            ->values()
+            ->all();
     }
 }
