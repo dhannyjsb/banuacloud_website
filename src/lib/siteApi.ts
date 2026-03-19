@@ -222,8 +222,8 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$
 export const defaultSiteSettings: SiteSettings = {
   maintenanceMode: import.meta.env.VITE_MAINTENANCE_MODE === 'true',
   siteName: import.meta.env.VITE_COMPANY_NAME || 'Banua Cloud Nusantara',
-  siteDescription: import.meta.env.VITE_COMPANY_DESCRIPTOR || 'Mitra solusi IT tepercaya di Indonesia',
-  companyName: import.meta.env.VITE_COMPANY_FULL_NAME || 'Banua Cloud Nusantara',
+  siteDescription: import.meta.env.VITE_COMPANY_DESCRIPTOR || 'Mitra infrastruktur IT, cloud, dan jaringan untuk bisnis di Indonesia',
+  companyName: import.meta.env.VITE_COMPANY_FULL_NAME || import.meta.env.VITE_COMPANY_NAME || 'Banua Cloud Nusantara',
   companyEmail: import.meta.env.VITE_SUPPORT_EMAIL || 'support@banuacloud.id',
   companyPhone: import.meta.env.VITE_SUPPORT_PHONE || '+62 812-3456-7890',
   companyWhatsapp: import.meta.env.VITE_SUPPORT_WHATSAPP_RAW || '6281234567890',
@@ -240,10 +240,10 @@ export const defaultSiteSettings: SiteSettings = {
 };
 
 export const defaultHeroContent: HeroContent = {
-  title: 'Solusi Cloud untuk Bisnis Modern',
-  subtitle: 'Rasakan performa super cepat dengan infrastruktur cloud tingkat enterprise kami. Solusi yang skalabel, aman, dan terpercaya disesuaikan dengan kebutuhan bisnis Anda.',
-  ctaPrimary: 'Mulai Sekarang',
-  ctaSecondary: 'Lihat Harga',
+  title: 'Mitra Infrastruktur IT untuk Bisnis Modern',
+  subtitle: 'Banua Cloud Nusantara membantu perusahaan merancang, membangun, dan mengelola cloud, jaringan kantor dan gedung, backup, serta pengembangan aplikasi dengan pendekatan yang rapi dan terukur.',
+  ctaPrimary: 'Pelajari Profil Kami',
+  ctaSecondary: 'Lihat Layanan',
 };
 
 export const defaultFeatures: FeatureItem[] = [

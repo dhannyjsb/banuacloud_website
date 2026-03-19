@@ -65,7 +65,7 @@ const goToService = (slug: string) => {
               <div class="public-logo">
                 <span class="public-logo-mark">B</span>
                 <span>
-                  <span class="block text-sm font-semibold text-slate-900">Banua Cloud Nusantara</span>
+                  <span class="block text-sm font-semibold text-slate-900">{{ siteSettings.siteName }}</span>
                   <span class="block text-xs text-slate-500">Cloud &amp; managed IT</span>
                 </span>
               </div>

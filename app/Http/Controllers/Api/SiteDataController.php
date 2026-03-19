@@ -135,8 +135,8 @@ class SiteDataController extends Controller
             return [
                 'maintenanceMode' => false,
                 'siteName' => 'Banua Cloud Nusantara',
-                'siteDescription' => 'Mitra solusi IT tepercaya di Indonesia',
-                'companyName' => 'PT Banua Cloud Nusantara',
+                'siteDescription' => 'Mitra infrastruktur IT, cloud, dan jaringan untuk bisnis di Indonesia',
+                'companyName' => 'Banua Cloud Nusantara',
                 'companyEmail' => 'support@banuacloud.id',
                 'companyPhone' => '+62 812-3456-7890',
                 'companyWhatsapp' => '6281234567890',
@@ -180,10 +180,10 @@ class SiteDataController extends Controller
 
         if (! $hero) {
             return [
-                'title' => 'Solusi Cloud untuk Bisnis Modern',
-                'subtitle' => 'Rasakan performa super cepat dengan infrastruktur cloud tingkat enterprise kami. Solusi yang skalabel, aman, dan terpercaya disesuaikan dengan kebutuhan bisnis Anda.',
-                'ctaPrimary' => 'Mulai Sekarang',
-                'ctaSecondary' => 'Lihat Harga',
+                'title' => 'Mitra Infrastruktur IT untuk Bisnis Modern',
+                'subtitle' => 'Banua Cloud Nusantara membantu perusahaan merancang, membangun, dan mengelola cloud, jaringan kantor dan gedung, backup, serta pengembangan aplikasi dengan pendekatan yang rapi dan terukur.',
+                'ctaPrimary' => 'Pelajari Profil Kami',
+                'ctaSecondary' => 'Lihat Layanan',
             ];
         }
 

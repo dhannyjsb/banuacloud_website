@@ -7,6 +7,7 @@ import PublicNavbar from '../components/public/PublicNavbar.vue';
 import { resolveMarketingIcon, resolveServiceIcon } from '../lib/iconMaps';
 import { executeMarketingCtaTarget } from '../lib/marketingCta';
 import { fetchLearnMorePageFromApi, type LearnMorePageData } from '../lib/siteApi';
+import { useSiteBootstrap } from '../composables/useSiteBootstrap';
 import { useScrollReveal } from '../composables/useScrollReveal';
 
 const router = useRouter();
@@ -15,9 +16,32 @@ const page = ref<LearnMorePageData | null>(null);
 const isLoading = ref(true);
 const errorMessage = ref('');
 const openFaq = ref<number | null>(0);
+const { siteSettings } = useSiteBootstrap();
 useScrollReveal(pageRef);
 
 const serviceHighlights = computed(() => page.value?.services.slice(0, 3).map((service) => service.title) ?? []);
+const companyCapabilities = [
+  {
+    icon: 'Server',
+    title: 'Cloud & Infrastruktur',
+    description: 'Penyediaan server, hosting, backup, dan fondasi operasional inti.',
+  },
+  {
+    icon: 'Globe2',
+    title: 'Jaringan Kantor & Gedung',
+    description: 'Konstruksi, revitalisasi, dan penataan jaringan untuk lingkungan kerja baru maupun existing.',
+  },
+  {
+    icon: 'Code',
+    title: 'Implementasi Aplikasi',
+    description: 'Pengembangan sistem web dan mobile yang disiapkan untuk kebutuhan bisnis.',
+  },
+  {
+    icon: 'Shield',
+    title: 'Managed IT',
+    description: 'Pendampingan teknis, keamanan, dan continuity plan yang lebih terukur.',
+  },
+];
 const primaryFallbackTarget = computed(() => {
   const firstServiceSlug = page.value?.services[0]?.slug;
   return firstServiceSlug ? `/services/${firstServiceSlug}` : '#learn-more-services';
@@ -66,7 +90,7 @@ onMounted(() => {
       <section class="public-section pt-12 md:pt-20">
         <div class="public-container">
           <div v-if="isLoading" class="public-card px-6 py-16 text-center text-base text-slate-600 md:px-8">
-            Memuat informasi layanan Banua Cloud Nusantara...
+            Memuat informasi layanan {{ siteSettings.siteName }}...
           </div>
 
           <div v-else-if="errorMessage" class="public-card border-red-200 bg-red-50/80 px-6 py-10 text-center text-red-700 md:px-8">
@@ -100,6 +124,29 @@ onMounted(() => {
                     </div>
                     <p class="mt-2 text-lg font-bold text-slate-900">{{ stat.value }}</p>
                     <p class="mt-1 text-[0.6875rem] font-medium uppercase tracking-wider text-slate-400">{{ stat.label }}</p>
+                  </article>
+                </div>
+              </div>
+
+              <div class="public-divider mt-8 pt-8">
+                <div class="flex items-center justify-between gap-4 mb-5">
+                  <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Bidang Utama</p>
+                    <h2 class="mt-2 text-lg font-semibold text-slate-900">Kapabilitas perusahaan yang ditangani dalam satu alur implementasi</h2>
+                  </div>
+                </div>
+
+                <div class="reveal-stagger grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <article
+                    v-for="capability in companyCapabilities"
+                    :key="capability.title"
+                    class="reveal-item rounded-2xl border border-slate-200/80 bg-white/75 px-4 py-4 shadow-[0_18px_60px_-42px_rgba(15,23,42,0.3)]"
+                  >
+                    <div class="public-icon-wrap public-icon-wrap-secondary h-10 w-10">
+                      <component :is="resolveMarketingIcon(capability.icon)" class="h-4.5 w-4.5" />
+                    </div>
+                    <h3 class="mt-4 text-sm font-semibold text-slate-900">{{ capability.title }}</h3>
+                    <p class="mt-2 text-xs leading-relaxed text-slate-500">{{ capability.description }}</p>
                   </article>
                 </div>
               </div>

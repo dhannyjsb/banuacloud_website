@@ -16,10 +16,12 @@ import {
   User
 } from 'lucide-vue-next';
 import { useAuthStore } from '../stores/auth';
+import { useSiteBootstrap } from '../composables/useSiteBootstrap';
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const { siteSettings } = useSiteBootstrap();
 
 const isSidebarOpen = ref(true);
 const isMobileMenuOpen = ref(false);
@@ -284,7 +286,7 @@ onUnmounted(() => {
 
       <footer class="border-t border-white/10 bg-[#0f172a]/70 px-4 py-4 backdrop-blur-xl lg:px-8">
         <div class="mx-auto flex max-w-7xl flex-col gap-2 text-sm text-slate-400 md:flex-row md:items-center md:justify-between">
-          <p>© {{ currentYear }} Banua Cloud Nusantara Admin Panel</p>
+          <p>© {{ currentYear }} {{ siteSettings.siteName }} Admin Panel</p>
           <p>Infrastructure, Innovation, Impact</p>
         </div>
       </footer>

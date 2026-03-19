@@ -6,7 +6,7 @@ import PublicFooter from '../components/public/PublicFooter.vue';
 import PublicNavbar from '../components/public/PublicNavbar.vue';
 import { useSiteBootstrap } from '../composables/useSiteBootstrap';
 import { useScrollReveal } from '../composables/useScrollReveal';
-import { resolveFeatureIcon, resolveServiceIcon } from '../lib/iconMaps';
+import { resolveFeatureIcon, resolveMarketingIcon, resolveServiceIcon } from '../lib/iconMaps';
 
 const router = useRouter();
 const pageRef = ref<HTMLElement | null>(null);
@@ -60,6 +60,29 @@ const heroStats = computed(() => [
     value: `${featuredTestimonials.value.length}+`,
   },
 ]);
+
+const companyFocusAreas = [
+  {
+    icon: 'Server',
+    title: 'Cloud & VPS',
+    description: 'Server dan workload inti perusahaan.',
+  },
+  {
+    icon: 'Globe2',
+    title: 'Jaringan Gedung',
+    description: 'Konstruksi dan revitalisasi jaringan.',
+  },
+  {
+    icon: 'Code',
+    title: 'Pengembangan Aplikasi',
+    description: 'Web dan mobile untuk operasional.',
+  },
+  {
+    icon: 'Shield',
+    title: 'Managed IT & Backup',
+    description: 'Support, keamanan, dan continuity.',
+  },
+];
 
 const featuredCapabilities = computed(() => features.value.slice(0, 6));
 
@@ -152,8 +175,8 @@ const scrollToSection = (id: string) => {
               </div>
 
               <div class="flex flex-wrap gap-2 animate-fade-in delay-300">
-                <span class="public-chip">Tim support manusia, bukan template</span>
-                <span class="public-chip">Stack layanan bisa di-scale bertahap</span>
+                <span class="public-chip">Cloud, aplikasi, dan backup terkelola</span>
+                <span class="public-chip">Konstruksi jaringan kantor dan gedung</span>
               </div>
             </div>
 
@@ -167,7 +190,7 @@ const scrollToSection = (id: string) => {
 
               <div class="public-divider mt-6 pt-6">
                 <div class="flex items-center justify-between gap-4 mb-5">
-                  <h2 class="text-lg font-semibold text-slate-900">Layanan Unggulan</h2>
+                  <h2 class="text-lg font-semibold text-slate-900">Cakupan Layanan Utama</h2>
                   <button type="button" class="hidden text-sm font-medium text-teal-700 hover:text-teal-800 md:block" @click="goToLearnMore">
                     Lihat semua &rarr;
                   </button>
@@ -199,14 +222,44 @@ const scrollToSection = (id: string) => {
         </div>
       </section>
 
+      <section class="public-section pt-0">
+        <div class="public-container">
+          <div class="public-card-muted px-6 py-7 md:px-8 md:py-8">
+            <div class="reveal flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <span class="public-eyebrow mb-3">Bidang Utama</span>
+                <h2 class="text-xl font-semibold tracking-tight text-slate-900 md:text-2xl">Kapabilitas perusahaan yang ditangani dalam satu alur implementasi.</h2>
+              </div>
+              <p class="max-w-2xl text-sm leading-relaxed text-slate-500">
+                Dari cloud dan aplikasi sampai jaringan kantor atau gedung, setiap area ditata agar implementasi dan operasional berjalan lebih rapi.
+              </p>
+            </div>
+
+            <div class="reveal-stagger mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <article
+                v-for="area in companyFocusAreas"
+                :key="area.title"
+                class="reveal-item rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-4 shadow-[0_18px_60px_-42px_rgba(15,23,42,0.3)]"
+              >
+                <div class="public-icon-wrap public-icon-wrap-secondary h-10 w-10">
+                  <component :is="resolveMarketingIcon(area.icon)" class="h-4.5 w-4.5" />
+                </div>
+                <h3 class="mt-4 text-sm font-semibold text-slate-900">{{ area.title }}</h3>
+                <p class="mt-2 text-xs leading-relaxed text-slate-500">{{ area.description }}</p>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Services -->
       <section id="services" class="public-section public-anchor">
         <div class="public-container">
           <div class="reveal public-section-heading mb-12">
-            <span class="public-eyebrow mb-3">Layanan</span>
-            <h2 class="public-section-title mb-3">Fondasi operasional yang lebih rapi untuk aplikasi, data, dan infrastruktur inti.</h2>
+            <span class="public-eyebrow mb-3">Profil Layanan</span>
+            <h2 class="public-section-title mb-3">Kapabilitas perusahaan untuk cloud, aplikasi, jaringan, dan infrastruktur operasional.</h2>
             <p class="text-[0.9375rem] leading-relaxed text-slate-500">
-              Setiap layanan dibangun agar tim Anda bisa bergerak lebih cepat tanpa kehilangan kontrol terhadap performa, keamanan, dan kontinuitas kerja.
+              Banua Cloud Nusantara mendampingi kebutuhan perusahaan dari perencanaan, implementasi, konstruksi jaringan, sampai pengelolaan operasional agar fondasi teknologi lebih siap tumbuh.
             </p>
           </div>
 

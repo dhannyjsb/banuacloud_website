@@ -2,10 +2,12 @@
 import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ArrowRight, Menu, X } from 'lucide-vue-next';
+import { useSiteBootstrap } from '../../composables/useSiteBootstrap';
 
 const route = useRoute();
 const router = useRouter();
 const isMenuOpen = ref(false);
+const { siteSettings } = useSiteBootstrap();
 
 const navigateHome = () => {
   isMenuOpen.value = false;
@@ -41,7 +43,7 @@ const goToLearnMore = () => {
       <div class="public-nav-shell">
         <button type="button" class="public-logo" @click="navigateHome">
           <span class="public-logo-mark">B</span>
-          <span class="text-sm font-semibold tracking-tight text-slate-900">Banua Cloud Nusantara</span>
+          <span class="text-sm font-semibold tracking-tight text-slate-900">{{ siteSettings.siteName }}</span>
         </button>
 
         <nav class="hidden items-center gap-7 lg:flex">
@@ -56,7 +58,7 @@ const goToLearnMore = () => {
             Lihat Layanan
           </button>
           <button type="button" class="public-button public-button-primary" @click="goToLearnMore">
-            Pelajari Lebih Lanjut
+            Profil Perusahaan
             <ArrowRight class="h-3.5 w-3.5" />
           </button>
         </div>
@@ -81,7 +83,7 @@ const goToLearnMore = () => {
           <button type="button" class="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" @click="goToHomeSection('#contact')">Kontak</button>
           <div class="pt-2">
             <button type="button" class="public-button public-button-primary w-full" @click="goToLearnMore">
-              Pelajari Lebih Lanjut
+              Profil Perusahaan
               <ArrowRight class="h-3.5 w-3.5" />
             </button>
           </div>

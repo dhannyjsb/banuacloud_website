@@ -20,8 +20,8 @@ class SiteDataSeeder extends Seeder
             [
                 'maintenance_mode' => filter_var(env('VITE_MAINTENANCE_MODE', false), FILTER_VALIDATE_BOOLEAN),
                 'site_name' => env('VITE_COMPANY_NAME', 'Banua Cloud Nusantara'),
-                'site_description' => env('VITE_COMPANY_DESCRIPTOR', 'Mitra solusi IT tepercaya di Indonesia'),
-                'company_name' => env('APP_NAME', 'Banua Cloud Nusantara'),
+                'site_description' => env('VITE_COMPANY_DESCRIPTOR', 'Mitra infrastruktur IT, cloud, dan jaringan untuk bisnis di Indonesia'),
+                'company_name' => env('VITE_COMPANY_FULL_NAME', env('VITE_COMPANY_NAME', env('APP_NAME', 'Banua Cloud Nusantara'))),
                 'company_email' => env('VITE_SUPPORT_EMAIL', 'support@banuacloud.id'),
                 'company_phone' => env('VITE_SUPPORT_PHONE', '+62 812-3456-7890'),
                 'company_whatsapp' => env('VITE_SUPPORT_WHATSAPP_RAW', '6281234567890'),
@@ -41,10 +41,10 @@ class SiteDataSeeder extends Seeder
         HeroContent::query()->updateOrCreate(
             ['id' => 1],
             [
-                'title' => 'Solusi Cloud untuk Bisnis Modern',
-                'subtitle' => 'Rasakan performa super cepat dengan infrastruktur cloud tingkat enterprise kami. Solusi yang skalabel, aman, dan terpercaya disesuaikan dengan kebutuhan bisnis Anda.',
-                'cta_primary' => 'Mulai Sekarang',
-                'cta_secondary' => 'Lihat Harga',
+                'title' => 'Mitra Infrastruktur IT untuk Bisnis Modern',
+                'subtitle' => 'Banua Cloud Nusantara membantu perusahaan merancang, membangun, dan mengelola cloud, jaringan kantor dan gedung, backup, serta pengembangan aplikasi dengan pendekatan yang rapi dan terukur.',
+                'cta_primary' => 'Pelajari Profil Kami',
+                'cta_secondary' => 'Lihat Layanan',
             ],
         );
 
@@ -69,9 +69,9 @@ class SiteDataSeeder extends Seeder
         if (Testimonial::query()->doesntExist()) {
             foreach (
                 [
-                    ['name' => 'Ahmad Pratama', 'role' => 'CTO', 'company' => 'TechStart Indonesia', 'content' => 'Banua Cloud telah mengubah cara kami mendeploy aplikasi. Kecepatan dan keandalan tidak tertandingi, dan tim support mereka selalu siap membantu kapan saja.'],
-                    ['name' => 'Siti Nurhaliza', 'role' => 'Founder', 'company' => 'DigitalAgency', 'content' => 'Kami telah mencoba banyak penyedia cloud, tapi Banua Cloud menonjol dengan uptime luar biasa dan harga kompetitif. Sangat direkomendasikan untuk bisnis di Indonesia.'],
-                    ['name' => 'Budi Santoso', 'role' => 'IT Manager', 'company' => 'EcomStore', 'content' => 'Migrasi ke Banua Cloud berjalan mulus. Tim mereka menangani semuanya dengan profesional, dan performa website kami meningkat signifikan.'],
+                    ['name' => 'Ahmad Pratama', 'role' => 'CTO', 'company' => 'TechStart Indonesia', 'content' => 'Banua Cloud Nusantara telah mengubah cara kami mendeploy aplikasi. Kecepatan dan keandalan tidak tertandingi, dan tim support mereka selalu siap membantu kapan saja.'],
+                    ['name' => 'Siti Nurhaliza', 'role' => 'Founder', 'company' => 'DigitalAgency', 'content' => 'Kami telah mencoba banyak penyedia cloud, tapi Banua Cloud Nusantara menonjol dengan uptime luar biasa dan harga kompetitif. Sangat direkomendasikan untuk bisnis di Indonesia.'],
+                    ['name' => 'Budi Santoso', 'role' => 'IT Manager', 'company' => 'EcomStore', 'content' => 'Migrasi ke Banua Cloud Nusantara berjalan mulus. Tim mereka menangani semuanya dengan profesional, dan performa website kami meningkat signifikan.'],
                 ] as $index => $testimonial
             ) {
                 Testimonial::query()->create([
@@ -234,18 +234,18 @@ class SiteDataSeeder extends Seeder
     {
         $pages = [
             'learn-more' => [
-                'heroBadge' => 'Pelajari Lebih Lanjut',
-                'heroTitlePrefix' => 'Semua yang Anda butuhkan untuk',
-                'heroTitleHighlight' => 'Bisnis Digital',
-                'heroDescription' => 'Temukan layanan cloud dan IT terbaik yang dirancang untuk memenuhi kebutuhan bisnis Anda di era digital.',
+                'heroBadge' => 'Profil Perusahaan',
+                'heroTitlePrefix' => 'Kapabilitas Infrastruktur untuk',
+                'heroTitleHighlight' => 'Perusahaan Modern',
+                'heroDescription' => 'Banua Cloud Nusantara hadir sebagai mitra implementasi untuk cloud, jaringan kantor dan gedung, backup, domain, serta pengembangan aplikasi yang disesuaikan dengan kebutuhan operasional bisnis.',
                 'stats' => [
                     ['icon' => 'Server', 'value' => '500+', 'label' => 'Server'],
                     ['icon' => 'Clock', 'value' => '99.9%', 'label' => 'Uptime'],
                     ['icon' => 'Users', 'value' => '10RB+', 'label' => 'Pelanggan'],
                 ],
-                'serviceSectionBadge' => 'Layanan Kami',
-                'serviceSectionTitle' => 'Solusi inti untuk pertumbuhan digital',
-                'serviceSectionDescription' => 'Dari infrastruktur cloud hingga pengembangan aplikasi, Banua Cloud menyiapkan fondasi digital yang siap dipakai dan mudah dikembangkan.',
+                'serviceSectionBadge' => 'Bidang Layanan',
+                'serviceSectionTitle' => 'Ruang lingkup solusi yang kami tangani dari perencanaan sampai operasional',
+                'serviceSectionDescription' => 'Kami tidak hanya menyediakan layanan cloud, tetapi juga membantu konstruksi jaringan, implementasi aplikasi, backup, dan pengelolaan infrastruktur yang dibutuhkan perusahaan.',
                 'services' => [
                     [
                         'slug' => 'cloud-vps',
@@ -332,21 +332,22 @@ class SiteDataSeeder extends Seeder
                         'icon' => 'message-square',
                         'title' => 'Konsultasi IT',
                         'subtitle' => 'Konsultasi IT',
-                        'description' => 'Dapatkan panduan ahli untuk transformasi digital bisnis Anda. Kami membantu Anda merencanakan, mengimplementasikan, dan mengoptimalkan infrastruktur teknologi.',
+                        'description' => 'Pendampingan strategis dan teknis untuk transformasi digital, revitalisasi jaringan kantor, pembangunan jaringan gedung, dan penguatan fondasi operasional IT perusahaan.',
                         'features' => [
                             'Konsultasi infrastruktur IT',
                             'Transformasi digital',
+                            'Revitalisasi jaringan kantor',
+                            'Pembangunan jaringan gedung',
                             'Evaluasi keamanan sistem',
                             'Optimasi performa',
-                            'Pelatihan tim IT',
                             'Rencana IT strategis',
                         ],
                         'gradient' => 'cyan',
                     ],
                 ],
-                'reasonsBadge' => 'Keunggulan',
-                'reasonsTitle' => 'Alasan bisnis memilih Banua Cloud',
-                'reasonsDescription' => 'Kami menggabungkan tim responsif, platform stabil, dan pendekatan konsultatif agar keputusan teknologi Anda lebih tepat.',
+                'reasonsBadge' => 'Pendekatan Kerja',
+                'reasonsTitle' => 'Alasan perusahaan mempercayakan implementasi ke Banua Cloud Nusantara',
+                'reasonsDescription' => 'Fokus kami bukan hanya menjual layanan, tetapi menyiapkan fondasi teknis yang bisa dipakai jangka panjang dan mudah dikembangkan.',
                 'reasons' => [
                     ['icon' => 'Zap', 'title' => 'Super Cepat', 'description' => 'Infrastruktur performa tinggi dengan CDN global untuk kecepatan optimal.'],
                     ['icon' => 'Shield', 'title' => 'Aman Terjamin', 'description' => 'Enkripsi tingkat bank dan proteksi DDoS enterprise untuk keamanan data Anda.'],
@@ -361,12 +362,12 @@ class SiteDataSeeder extends Seeder
                     ['question' => 'Apakah saya bisa upgrade layanan di kemudian hari?', 'answer' => 'Tentu. Semua layanan kami dapat di-upgrade kapan saja. Anda cukup mengajukan upgrade melalui panel klien kami, dan tim kami akan memprosesnya dalam waktu singkat.'],
                     ['question' => 'Berapa lama waktu setup layanan?', 'answer' => 'Cloud VPS biasanya siap dalam 1-24 jam. Web hosting dan domain dapat aktif dalam hitungan menit setelah pembayaran terkonfirmasi.'],
                     ['question' => 'Apakah ada garansi uptime?', 'answer' => 'Ya, kami memberikan garansi uptime 99.9% untuk layanan infrastruktur utama. Jika uptime tidak terpenuhi, Anda berhak mendapatkan kompensasi sesuai SLA.'],
-                    ['question' => 'Bagaimana sistem support Banua Cloud?', 'answer' => 'Kami menyediakan support 24/7 melalui ticket system, live chat, dan telepon. Tim support kami terdiri dari teknisi berpengalaman yang siap membantu Anda kapan saja.'],
+                    ['question' => 'Bagaimana sistem support Banua Cloud Nusantara?', 'answer' => 'Kami menyediakan support 24/7 melalui ticket system, live chat, dan telepon. Tim support kami terdiri dari teknisi berpengalaman yang siap membantu Anda kapan saja.'],
                 ],
-                'ctaTitle' => 'Siap menentukan solusi yang tepat?',
-                'ctaDescription' => 'Diskusikan kebutuhan infrastruktur, hosting, domain, atau pengembangan aplikasi Anda bersama tim Banua Cloud.',
-                'ctaPrimary' => 'Konsultasi Gratis',
-                'ctaSecondary' => 'Jelajahi Layanan',
+                'ctaTitle' => 'Butuh partner untuk cloud, jaringan, atau implementasi sistem?',
+                'ctaDescription' => 'Diskusikan kebutuhan perusahaan Anda bersama tim Banua Cloud Nusantara, mulai dari konsultasi, pembangunan jaringan, sampai pengelolaan infrastruktur.',
+                'ctaPrimary' => 'Jadwalkan Diskusi',
+                'ctaSecondary' => 'Lihat Detail Layanan',
             ],
             'service:cloud-vps' => [
                 'slug' => 'cloud-vps',
