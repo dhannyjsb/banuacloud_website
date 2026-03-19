@@ -66,9 +66,39 @@ class SiteDataController extends Controller
 
     public function serviceDetail(string $slug): JsonResponse
     {
-        return response()->json(
-            $this->marketingPayload("service:{$slug}"),
-        );
+        $payload = $this->marketingPayload("service:{$slug}");
+        $marketingPricingCards = collect($payload['pricingCards'] ?? []);
+
+        $service = Service::query()
+            ->with('plans')
+            ->where('slug', $slug)
+            ->first();
+
+        if ($service && $service->plans->isNotEmpty()) {
+            $servicePricingCards = $service->plans
+                ->map(fn($plan): array => [
+                    'name' => $plan->name,
+                    'price' => number_format($plan->price, 0, ',', '.'),
+                    'period' => $plan->period,
+                    'specs' => collect($plan->specs ?? [])
+                        ->mapWithKeys(fn($value, $key): array => [(string) $key => (string) $value])
+                        ->all(),
+                    'features' => array_map('strval', $plan->features ?? []),
+                    'popular' => $plan->popular,
+                    'color' => $plan->color,
+                ])
+                ->values();
+
+            if ($marketingPricingCards->count() > $servicePricingCards->count()) {
+                $servicePricingCards = $servicePricingCards->concat(
+                    $marketingPricingCards->slice($servicePricingCards->count())->values(),
+                );
+            }
+
+            $payload['pricingCards'] = $servicePricingCards->all();
+        }
+
+        return response()->json($payload);
     }
 
     private function marketingPayload(string $pageKey): array
@@ -104,9 +134,9 @@ class SiteDataController extends Controller
         if (! $settings) {
             return [
                 'maintenanceMode' => false,
-                'siteName' => 'Banua Cloud',
+                'siteName' => 'Banua Cloud Nusantara',
                 'siteDescription' => 'Mitra solusi IT tepercaya di Indonesia',
-                'companyName' => 'PT Banua Cloud Teknologi',
+                'companyName' => 'PT Banua Cloud Nusantara',
                 'companyEmail' => 'support@banuacloud.id',
                 'companyPhone' => '+62 812-3456-7890',
                 'companyWhatsapp' => '6281234567890',

@@ -41,7 +41,7 @@ const goToLearnMore = () => {
       <div class="public-nav-shell">
         <button type="button" class="public-logo" @click="navigateHome">
           <span class="public-logo-mark">B</span>
-          <span class="text-sm font-semibold tracking-tight text-slate-900">Banua Cloud</span>
+          <span class="text-sm font-semibold tracking-tight text-slate-900">Banua Cloud Nusantara</span>
         </button>
 
         <nav class="hidden items-center gap-7 lg:flex">

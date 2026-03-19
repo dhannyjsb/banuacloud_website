@@ -99,6 +99,24 @@ const goToFooterSecondaryCta = () => {
   executeMarketingCtaTarget(router, page.value?.ctaSecondaryTarget, defaultFooterSecondaryTarget.value);
 };
 
+const hasVisiblePrice = (price: string): boolean => {
+  const normalized = price.replace(/\./g, '').replace(/,/g, '').trim();
+
+  return normalized !== '' && normalized !== '0';
+};
+
+const usesContactPricing = (price: string): boolean => {
+  return !hasVisiblePrice(price);
+};
+
+const shouldShowExtraItemPrice = (): boolean => {
+  return page.value?.slug !== 'domain';
+};
+
+const shouldUseCompactExtraGrid = (): boolean => {
+  return page.value?.slug === 'domain';
+};
+
 const loadPage = async (slug: string) => {
   isLoading.value = true;
   errorMessage.value = '';
@@ -220,18 +238,30 @@ watch(
             </div>
 
             <div class="reveal-stagger grid gap-5 xl:grid-cols-3">
-              <article v-for="plan in pricingCards" :key="plan.name" class="reveal-item public-card p-6">
+              <article v-for="plan in pricingCards" :key="plan.name" class="reveal-item public-card flex h-full flex-col p-6">
                 <div class="flex items-start justify-between gap-4">
                   <div>
-                    <p class="text-xs font-medium uppercase tracking-wider text-slate-500">{{ plan.period }}</p>
+                    <p v-if="hasVisiblePrice(plan.price)" class="text-xs font-medium uppercase tracking-wider text-slate-500">{{ plan.period }}</p>
+                    <p v-else class="text-xs font-medium uppercase tracking-wider text-slate-400">Harga fleksibel</p>
                     <h3 class="mt-1.5 text-base font-semibold text-slate-900">{{ plan.name }}</h3>
                   </div>
                   <span v-if="plan.popular" :class="['rounded-full px-2.5 py-0.5 text-xs font-semibold', accentTheme.tag]">Paling dipilih</span>
                 </div>
 
-                <p class="mt-5 text-2xl font-bold text-slate-900">{{ plan.price }}</p>
+                <div class="mt-5 min-h-14">
+                  <p v-if="hasVisiblePrice(plan.price)" class="text-2xl font-bold text-slate-900">{{ plan.price }}</p>
+                  <div v-else class="inline-flex max-w-[17rem] items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div :class="['mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full', accentTheme.iconWrap]">
+                      <Headphones :class="['h-4 w-4', accentTheme.iconColor]" />
+                    </div>
+                    <div>
+                      <p class="text-sm font-semibold text-slate-900">Hubungi kami untuk harganya</p>
+                      <p class="mt-1 text-xs leading-relaxed text-slate-500">Paket ini disesuaikan dengan kebutuhan implementasi Anda.</p>
+                    </div>
+                  </div>
+                </div>
 
-                <div class="mt-5 grid gap-2 rounded-xl bg-slate-50 p-4">
+                <div :class="['mt-5 grid gap-2 rounded-xl p-4', usesContactPricing(plan.price) ? 'bg-slate-100/80' : 'bg-slate-50']">
                   <div v-for="(specValue, specLabel) in plan.specs" :key="specLabel" class="flex items-center justify-between gap-4 text-sm text-slate-600">
                     <span class="capitalize">{{ specLabel }}</span>
                     <span class="font-semibold text-slate-900">{{ specValue }}</span>
@@ -245,7 +275,7 @@ watch(
                   </li>
                 </ul>
 
-                <div class="mt-5">
+                <div class="mt-auto pt-5">
                   <button type="button" class="public-button public-button-secondary w-full text-sm" @click="goToFooterSecondaryCta">
                     {{ page.ctaSecondary }}
                   </button>
@@ -288,15 +318,32 @@ watch(
               </div>
             </div>
 
-            <div v-else-if="page.extraSection.type === 'price-grid'" class="reveal-stagger grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              <article v-for="(item, index) in extraItems" :key="`${item.title}-${index}`" class="reveal-item public-card p-6">
-                <div class="flex items-start justify-between gap-4">
-                  <h3 class="text-lg font-semibold text-slate-900">{{ item.title || item.label }}</h3>
-                  <span v-if="item.popular" :class="['rounded-full px-2.5 py-0.5 text-xs font-semibold', accentTheme.tag]">Rekomendasi</span>
-                </div>
-                <p class="mt-3 text-2xl font-bold text-slate-900">{{ item.price }}<span v-if="item.suffix" class="text-sm font-medium text-slate-500"> {{ item.suffix }}</span></p>
-                <p class="mt-2 text-sm leading-relaxed text-slate-500">{{ item.description || item.text }}</p>
-              </article>
+            <div v-else-if="page.extraSection.type === 'price-grid'">
+              <div v-if="shouldUseCompactExtraGrid()" class="reveal-stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <article v-for="(item, index) in extraItems" :key="`${item.title}-${index}`" class="reveal-item public-card p-4">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 class="text-base font-semibold text-slate-900">{{ item.title || item.label }}</h3>
+                      <p class="mt-1 text-xs uppercase tracking-wider text-slate-400">Ekstensi populer</p>
+                    </div>
+                    <div :class="['flex h-9 w-9 items-center justify-center rounded-full', accentTheme.iconWrap]">
+                      <Check :class="['h-4 w-4', accentTheme.iconColor]" />
+                    </div>
+                  </div>
+                  <span v-if="item.popular" :class="['mt-4 inline-flex rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold', accentTheme.tag]">Rekomendasi</span>
+                </article>
+              </div>
+
+              <div v-else class="reveal-stagger grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                <article v-for="(item, index) in extraItems" :key="`${item.title}-${index}`" class="reveal-item public-card p-6">
+                  <div class="flex items-start justify-between gap-4">
+                    <h3 class="text-lg font-semibold text-slate-900">{{ item.title || item.label }}</h3>
+                    <span v-if="item.popular" :class="['rounded-full px-2.5 py-0.5 text-xs font-semibold', accentTheme.tag]">Rekomendasi</span>
+                  </div>
+                  <p v-if="shouldShowExtraItemPrice() && item.price" class="mt-3 text-2xl font-bold text-slate-900">{{ item.price }}<span v-if="item.suffix" class="text-sm font-medium text-slate-500"> {{ item.suffix }}</span></p>
+                  <p class="mt-2 text-sm leading-relaxed text-slate-500">{{ item.description || item.text }}</p>
+                </article>
+              </div>
             </div>
           </div>
         </section>

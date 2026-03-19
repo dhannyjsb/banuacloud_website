@@ -36,10 +36,9 @@ const heroTitleParts = computed(() => {
 const serviceSnapshots = computed(() => {
   return enabledServices.value.map((service) => ({
     ...service,
-    startingPrice: service.plans[0]
-      ? formatStartingPrice(service.plans[0].price, service.plans[0].period)
-      : 'Konsultasi sesuai kebutuhan',
-    highlights: service.plans[0]?.features?.slice(0, 3) ?? [
+    usesContactPricing: !getFirstPricedPlan(service),
+    startingPrice: getServiceStartingPrice(service),
+    highlights: getDisplayPlan(service)?.features?.slice(0, 3) ?? [
       'Implementasi tertata',
       'Monitoring yang mudah dibaca',
       'Pendampingan teknis responsif',
@@ -72,6 +71,18 @@ function formatPrice(price: number) {
   }).format(price);
 }
 
+function hasVisiblePrice(price: number) {
+  return Number.isFinite(price) && price > 0;
+}
+
+function getFirstPricedPlan(service: (typeof enabledServices.value)[number]) {
+  return service.plans.find((plan) => hasVisiblePrice(plan.price));
+}
+
+function getDisplayPlan(service: (typeof enabledServices.value)[number]) {
+  return getFirstPricedPlan(service) ?? service.plans[0];
+}
+
 function formatStartingPrice(price: number, period: string) {
   const normalizedPeriod = period.trim().replace(/^\/+/, '');
 
@@ -80,6 +91,16 @@ function formatStartingPrice(price: number, period: string) {
   }
 
   return `${formatPrice(price)} / ${normalizedPeriod}`;
+}
+
+function getServiceStartingPrice(service: (typeof enabledServices.value)[number]) {
+  const pricedPlan = getFirstPricedPlan(service);
+
+  if (!pricedPlan) {
+    return 'Hubungi kami';
+  }
+
+  return formatStartingPrice(pricedPlan.price, pricedPlan.period);
 }
 
 const goToLearnMore = () => {
@@ -168,7 +189,7 @@ const scrollToSection = (id: string) => {
                         <h3 class="text-sm font-semibold text-slate-900">{{ service.name }}</h3>
                         <p class="mt-0.5 text-xs text-slate-500 truncate">{{ service.description }}</p>
                       </div>
-                      <span class="shrink-0 text-xs font-semibold text-teal-700">{{ service.startingPrice }}</span>
+                      <span :class="service.usesContactPricing ? 'shrink-0 text-xs font-semibold text-slate-500' : 'shrink-0 text-xs font-semibold text-teal-700'">{{ service.startingPrice }}</span>
                     </div>
                   </button>
                 </div>
@@ -205,7 +226,7 @@ const scrollToSection = (id: string) => {
                       <h3 class="text-base font-semibold text-slate-900">{{ service.name }}</h3>
                       <p class="mt-0.5 text-xs text-slate-400">{{ service.plans.length || 1 }} opsi tersedia</p>
                     </div>
-                    <span class="shrink-0 rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">{{ service.startingPrice }}</span>
+                    <span :class="service.usesContactPricing ? 'shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600' : 'shrink-0 rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700'">{{ service.startingPrice }}</span>
                   </div>
                 </div>
               </div>

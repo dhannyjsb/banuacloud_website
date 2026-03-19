@@ -68,9 +68,9 @@ class SettingsController extends Controller
     {
         return SiteSetting::query()->firstOrCreate([], [
             'maintenance_mode' => false,
-            'site_name' => 'Banua Cloud',
+            'site_name' => 'Banua Cloud Nusantara',
             'site_description' => 'Mitra solusi IT tepercaya di Indonesia',
-            'company_name' => 'PT Banua Cloud Teknologi',
+            'company_name' => 'PT Banua Cloud Nusantara',
             'company_email' => 'support@banuacloud.id',
             'company_phone' => '+62 812-3456-7890',
             'company_whatsapp' => '6281234567890',

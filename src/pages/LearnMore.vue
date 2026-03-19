@@ -66,7 +66,7 @@ onMounted(() => {
       <section class="public-section pt-12 md:pt-20">
         <div class="public-container">
           <div v-if="isLoading" class="public-card px-6 py-16 text-center text-base text-slate-600 md:px-8">
-            Memuat informasi layanan Banua Cloud...
+            Memuat informasi layanan Banua Cloud Nusantara...
           </div>
 
           <div v-else-if="errorMessage" class="public-card border-red-200 bg-red-50/80 px-6 py-10 text-center text-red-700 md:px-8">
