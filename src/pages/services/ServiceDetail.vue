@@ -1,74 +1,82 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ArrowRight, CheckCircle, HeadphonesIcon } from 'lucide-vue-next';
-import ONavbar from '../../components/organisms/ONavbar.vue';
-import OFooter from '../../components/organisms/OFooter.vue';
-import AButton from '../../components/atoms/AButton.vue';
-import AGradientText from '../../components/atoms/AGradientText.vue';
-import AGlowOrb from '../../components/atoms/AGlowOrb.vue';
-import { useScrollAnimation } from '../../composables/useIntersectionObserver';
+import { ArrowRight, Check, Headphones } from 'lucide-vue-next';
+import PublicFooter from '../../components/public/PublicFooter.vue';
+import PublicNavbar from '../../components/public/PublicNavbar.vue';
 import { resolveMarketingIcon } from '../../lib/iconMaps';
 import { executeMarketingCtaTarget } from '../../lib/marketingCta';
 import { fetchServiceDetailPageFromApi, type ServiceDetailPageData } from '../../lib/siteApi';
+import { useScrollReveal } from '../../composables/useScrollReveal';
+
+type AccentTheme = {
+  badge: string;
+  iconWrap: string;
+  iconColor: string;
+  tag: string;
+  tint: string;
+};
+
+const accentThemes: Record<'sky' | 'cyan' | 'violet', AccentTheme> = {
+  sky: {
+    badge: 'bg-teal-50 text-teal-700',
+    iconWrap: 'bg-teal-50',
+    iconColor: 'text-teal-700',
+    tag: 'bg-teal-50 text-teal-700',
+    tint: 'bg-[linear-gradient(180deg,rgba(15,118,110,0.04),rgba(255,255,255,0))]',
+  },
+  cyan: {
+    badge: 'bg-cyan-50 text-cyan-700',
+    iconWrap: 'bg-cyan-50',
+    iconColor: 'text-cyan-700',
+    tag: 'bg-cyan-50 text-cyan-700',
+    tint: 'bg-[linear-gradient(180deg,rgba(13,148,136,0.04),rgba(255,255,255,0))]',
+  },
+  violet: {
+    badge: 'bg-violet-50 text-violet-700',
+    iconWrap: 'bg-violet-50',
+    iconColor: 'text-violet-700',
+    tag: 'bg-violet-50 text-violet-700',
+    tint: 'bg-[linear-gradient(180deg,rgba(124,61,143,0.04),rgba(255,255,255,0))]',
+  },
+};
 
 const route = useRoute();
 const router = useRouter();
-const { initScrollAnimations } = useScrollAnimation();
-
+const pageRef = ref<HTMLElement | null>(null);
 const page = ref<ServiceDetailPageData | null>(null);
 const isLoading = ref(true);
 const errorMessage = ref('');
+useScrollReveal(pageRef);
 
-const accentOrb = computed(() => (page.value?.accent === 'violet' ? 'violet' : page.value?.accent === 'cyan' ? 'cyan' : 'sky'));
-const pricingCards = computed(() => page.value?.pricingCards || []);
+const pricingCards = computed(() => page.value?.pricingCards ?? []);
 const heroHighlights = computed(() => page.value?.features.slice(0, 3).map((feature) => feature.title) ?? []);
-const accentPanelClass = computed(() => {
-  if (accentOrb.value === 'cyan') {
-    return 'bg-[linear-gradient(180deg,rgba(34,211,238,0.14),rgba(255,255,255,0.03))]';
-  }
-
-  if (accentOrb.value === 'violet') {
-    return 'bg-[linear-gradient(180deg,rgba(168,85,247,0.16),rgba(255,255,255,0.03))]';
-  }
-
-  return 'bg-[linear-gradient(180deg,rgba(14,165,233,0.14),rgba(255,255,255,0.03))]';
-});
-const accentLineClass = computed(() => {
-  if (accentOrb.value === 'cyan') {
-    return 'via-cyan-400/60';
-  }
-
-  if (accentOrb.value === 'violet') {
-    return 'via-violet-400/60';
-  }
-
-  return 'via-sky-400/60';
+const extraItems = computed(() => page.value?.extraSection?.items ?? []);
+const accentTheme = computed(() => {
+  const key = page.value?.accent === 'cyan' ? 'cyan' : page.value?.accent === 'violet' ? 'violet' : 'sky';
+  return accentThemes[key];
 });
 
-const sectionBadgeClass = (accent: string) => {
-  if (accent === 'cyan') {
-    return 'bg-gradient-to-br from-cyan-500/20 to-teal-500/20 border border-cyan-500/20';
+const summaryStats = computed(() => {
+  if (!page.value) {
+    return [];
   }
 
-  if (accent === 'violet') {
-    return 'bg-gradient-to-br from-violet-500/20 to-purple-500/20 border border-violet-500/20';
-  }
-
-  return 'bg-gradient-to-br from-sky-500/20 to-cyan-500/20 border border-sky-500/20';
-};
-
-const sectionIconClass = (accent: string) => {
-  if (accent === 'cyan') {
-    return 'text-cyan-400';
-  }
-
-  if (accent === 'violet') {
-    return 'text-violet-400';
-  }
-
-  return 'text-sky-400';
-};
+  return [
+    {
+      label: 'Area fokus',
+      value: `${page.value.features.length} kapabilitas`,
+    },
+    {
+      label: 'Pilihan paket',
+      value: pricingCards.value.length ? `${pricingCards.value.length} opsi` : 'Konsultasi sesuai kebutuhan',
+    },
+    {
+      label: 'Pendampingan',
+      value: 'Support teknis responsif',
+    },
+  ];
+});
 
 const defaultHeroPrimaryTarget = computed(() => (pricingCards.value.length ? '#service-pricing' : page.value?.extraSection ? '#service-extra' : '#service-contact'));
 const defaultHeroSecondaryTarget = computed(() => (page.value?.extraSection ? '#service-extra' : '#contact'));
@@ -91,20 +99,12 @@ const goToFooterSecondaryCta = () => {
   executeMarketingCtaTarget(router, page.value?.ctaSecondaryTarget, defaultFooterSecondaryTarget.value);
 };
 
-const goToRelatedAction = () => {
-  if (page.value?.slug) {
-    router.push('/learn-more');
-  }
-};
-
 const loadPage = async (slug: string) => {
   isLoading.value = true;
   errorMessage.value = '';
 
   try {
     page.value = await fetchServiceDetailPageFromApi(slug);
-    await nextTick();
-    initScrollAnimations();
   } catch (error) {
     page.value = null;
     errorMessage.value = error instanceof Error ? error.message : 'Detail layanan belum bisa dimuat saat ini.';
@@ -122,279 +122,214 @@ watch(
   },
   { immediate: true },
 );
-
-onMounted(() => {
-  if (typeof route.params.slug === 'string') {
-    void loadPage(route.params.slug);
-  }
-});
 </script>
 
 <template>
-  <div class="min-h-screen">
-    <div class="fixed inset-0 overflow-hidden pointer-events-none">
-      <AGlowOrb :color="accentOrb" :size="500" :position="{ top: '5%', left: '-15%' }" :delay="0" intensity="low" />
-      <AGlowOrb color="cyan" :size="400" :position="{ top: '40%', right: '-10%' }" :delay="3" intensity="low" />
-    </div>
+  <div ref="pageRef" class="public-page">
+    <PublicNavbar />
 
-    <ONavbar />
+    <main class="public-main">
+      <section class="public-section pt-12 md:pt-20">
+        <div class="public-container">
+          <div v-if="isLoading" class="public-card px-6 py-16 text-center text-base text-slate-600 md:px-8">
+            Memuat detail layanan...
+          </div>
 
-    <section class="relative overflow-hidden pt-28 pb-14 md:pt-36 md:pb-18">
-      <div class="absolute inset-0 bg-gradient-to-b from-sky-500/5 via-transparent to-transparent" />
+          <div v-else-if="errorMessage" class="public-card border-red-200 bg-red-50/80 px-6 py-10 text-center text-red-700 md:px-8">
+            {{ errorMessage }}
+          </div>
 
-      <div class="container-custom relative z-10">
-        <div v-if="isLoading" class="mx-auto max-w-4xl rounded-[2rem] border border-sky-400/15 bg-[#0b1628]/70 px-8 py-14 text-center text-sky-300 shadow-[0_24px_90px_rgba(2,12,27,0.36)]">
-          Memuat detail layanan...
-        </div>
-
-        <div v-else-if="errorMessage" class="mx-auto max-w-3xl rounded-[2rem] border border-red-500/20 bg-red-500/10 p-8 text-center text-red-300 shadow-[0_24px_90px_rgba(2,12,27,0.36)]">
-          {{ errorMessage }}
-        </div>
-
-        <div v-else-if="page" class="mx-auto max-w-6xl">
-          <div :class="['relative overflow-hidden rounded-[2rem] border border-white/10 px-6 py-12 shadow-[0_30px_110px_rgba(2,12,27,0.38)] md:px-12 md:py-14', accentPanelClass]">
-            <div :class="['absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent to-transparent', accentLineClass]" />
-            <div class="absolute -right-12 top-10 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
-            <div class="absolute -left-10 bottom-8 h-32 w-32 rounded-full bg-white/8 blur-3xl" />
-
-            <div class="relative z-10 text-center">
-              <div class="mb-8 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-sm text-slate-200 shadow-[0_0_0_1px_rgba(255,255,255,0.04)] animate-fade-in-up">
-                <component :is="resolveMarketingIcon(page.icon)" :class="['h-4 w-4', sectionIconClass(page.accent)]" />
-                <span>{{ page.heroBadge }}</span>
-              </div>
-
-              <h1 class="mb-6 font-display text-4xl font-bold leading-[0.96] text-white animate-fade-in-up delay-100 md:text-6xl lg:text-7xl">
-                <span class="mr-3 inline-block">{{ page.heroTitlePrefix }}</span>
-                <AGradientText>{{ page.heroTitleHighlight }}</AGradientText>
-              </h1>
-
-              <p class="mx-auto mb-8 max-w-3xl text-base leading-8 text-slate-300 animate-fade-in-up delay-200 md:text-xl">
-                {{ page.heroDescription }}
-              </p>
-
-              <div v-if="heroHighlights.length" class="mb-10 flex flex-wrap items-center justify-center gap-3 animate-fade-in-up delay-300">
-                <span
-                  v-for="highlight in heroHighlights"
-                  :key="highlight"
-                  class="rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-medium text-slate-200"
-                >
-                  {{ highlight }}
+          <div v-else-if="page" :class="['public-card overflow-hidden px-6 py-8 md:px-8 md:py-10 lg:px-10 lg:py-12', accentTheme.tint]">
+            <div class="grid gap-6 lg:grid-cols-[minmax(0,1.12fr)_minmax(20rem,0.88fr)] lg:items-start lg:gap-8">
+              <div>
+                <span :class="['mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold animate-fade-in', accentTheme.badge]">
+                  <component :is="resolveMarketingIcon(page.icon)" class="h-3.5 w-3.5" />
+                  {{ page.heroBadge }}
                 </span>
+
+                <h1 class="public-title animate-fade-in-up">
+                  {{ page.heroTitlePrefix }}
+                  <span :class="accentTheme.iconColor">{{ page.heroTitleHighlight }}</span>
+                </h1>
+
+                <p class="mt-5 max-w-3xl text-[0.9375rem] leading-relaxed text-slate-500 animate-fade-in-up delay-100">{{ page.heroDescription }}</p>
+
+                <div v-if="heroHighlights.length" class="mt-6 flex flex-wrap gap-2 animate-fade-in delay-200">
+                  <span v-for="highlight in heroHighlights" :key="highlight" class="public-chip">{{ highlight }}</span>
+                </div>
+
+                <div class="mt-8 flex flex-col gap-3 sm:flex-row animate-fade-in-up delay-200">
+                  <button type="button" class="public-button public-button-primary" @click="goToHeroPrimaryCta">
+                    {{ page.heroPrimaryCta }}
+                    <ArrowRight class="h-4 w-4" />
+                  </button>
+                  <button type="button" class="public-button public-button-secondary" @click="goToHeroSecondaryCta">
+                    {{ page.heroSecondaryCta }}
+                  </button>
+                </div>
               </div>
 
-              <div class="flex flex-col items-center justify-center gap-4 animate-fade-in-up delay-400 sm:flex-row">
-                <AButton variant="primary" size="lg" @click="goToHeroPrimaryCta">
-                  {{ page.heroPrimaryCta }}
-                  <ArrowRight class="ml-2 h-5 w-5" />
-                </AButton>
-                <AButton variant="secondary" size="lg" @click="goToHeroSecondaryCta">
-                  {{ page.heroSecondaryCta }}
-                </AButton>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <template v-if="page && !isLoading && !errorMessage">
-      <section class="section-py relative">
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.08),transparent_40%)]" />
-
-        <div class="container-custom relative z-10">
-          <div class="mx-auto mb-16 max-w-3xl text-center md:mb-20">
-            <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-sky-400/15 bg-sky-500/10 px-4 py-2">
-              <span class="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300">Keunggulan Layanan</span>
-            </div>
-            <h2 class="mb-5 text-3xl font-bold text-white md:text-5xl">
-              {{ page.featureSectionTitle }}
-            </h2>
-            <p class="text-lg leading-8 text-slate-400">
-              {{ page.featureSectionDescription }}
-            </p>
-          </div>
-
-          <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            <div
-              v-for="(feature, index) in page.features"
-              :key="feature.title"
-              class="scroll-animate"
-              :style="{ transitionDelay: `${index * 100}ms` }"
-            >
-              <div class="group relative h-full overflow-hidden rounded-[1.7rem] border border-white/10 bg-[#0b1628]/72 p-6 shadow-[0_24px_90px_rgba(2,12,27,0.28)] transition-transform duration-300 hover:-translate-y-1" :class="page.accent === 'violet' ? 'hover:border-violet-500/30' : page.accent === 'cyan' ? 'hover:border-cyan-500/30' : 'hover:border-sky-500/30'">
-                <div :class="['mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl', sectionBadgeClass(page.accent)]">
-                  <component :is="resolveMarketingIcon(feature.icon)" :class="['h-6 w-6', sectionIconClass(page.accent)]" />
-                </div>
-                <h3 class="mb-3 text-xl font-semibold text-white">{{ feature.title }}</h3>
-                <p class="mb-5 text-sm leading-7 text-slate-400">
-                  {{ feature.description }}
-                </p>
-                <div v-if="feature.tags?.length" class="flex flex-wrap gap-2">
-                  <span
-                    v-for="tag in feature.tags"
-                    :key="tag"
-                    class="rounded-full border px-3 py-1 text-xs"
-                    :class="page.accent === 'violet' ? 'border-violet-500/20 bg-violet-500/10 text-violet-300' : page.accent === 'cyan' ? 'border-cyan-500/20 bg-cyan-500/10 text-cyan-300' : 'border-sky-500/20 bg-sky-500/10 text-sky-300'"
-                  >
-                    {{ tag }}
-                  </span>
-                </div>
+              <div class="grid gap-4 sm:grid-cols-3 lg:grid-cols-2 animate-fade-in-up delay-200">
+                <article
+                  v-for="(stat, index) in summaryStats"
+                  :key="stat.label"
+                  :class="[
+                    'public-stat h-full text-left',
+                    index === summaryStats.length - 1 ? 'sm:col-span-3 lg:col-span-2' : '',
+                  ]"
+                >
+                  <p class="text-xl font-bold text-slate-900">{{ stat.value }}</p>
+                  <p class="mt-1 text-[0.6875rem] font-medium uppercase tracking-wider text-slate-400">{{ stat.label }}</p>
+                </article>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section v-if="pricingCards.length" id="service-pricing" class="section-py relative bg-white/[0.02]">
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.08),transparent_45%)]" />
-
-        <div class="container-custom relative z-10">
-          <div class="mx-auto mb-16 max-w-3xl text-center md:mb-20">
-            <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-400/15 bg-cyan-500/10 px-4 py-2">
-              <span class="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">Pilihan Paket</span>
+      <template v-if="page && !isLoading && !errorMessage">
+        <section class="public-section">
+          <div class="public-container">
+            <div class="reveal public-section-heading mb-12">
+              <span class="public-eyebrow mb-3">Keunggulan Layanan</span>
+              <h2 class="public-section-title mb-3">{{ page.featureSectionTitle }}</h2>
+              <p class="text-[0.9375rem] leading-relaxed text-slate-500">{{ page.featureSectionDescription }}</p>
             </div>
-            <h2 class="mb-5 text-3xl font-bold text-white md:text-5xl">
-              {{ page.pricingTitle }}
-            </h2>
-            <p class="text-lg leading-8 text-slate-400">
-              {{ page.pricingDescription }}
-            </p>
+
+            <div class="reveal-stagger grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              <article v-for="feature in page.features" :key="feature.title" class="reveal-item public-card p-6">
+                <div :class="['flex h-10 w-10 items-center justify-center rounded-xl', accentTheme.iconWrap]">
+                  <component :is="resolveMarketingIcon(feature.icon)" :class="['h-5 w-5', accentTheme.iconColor]" />
+                </div>
+                <h3 class="mt-4 text-base font-semibold text-slate-900">{{ feature.title }}</h3>
+                <p class="mt-2 text-sm leading-relaxed text-slate-500">{{ feature.description }}</p>
+                <div v-if="feature.tags?.length" class="mt-4 flex flex-wrap gap-1.5">
+                  <span v-for="tag in feature.tags" :key="tag" :class="['rounded-full px-2.5 py-0.5 text-xs font-semibold', accentTheme.tag]">{{ tag }}</span>
+                </div>
+              </article>
+            </div>
           </div>
+        </section>
 
-          <div class="mx-auto grid max-w-6xl grid-cols-1 gap-8 md:grid-cols-3">
-            <div
-              v-for="(plan, index) in pricingCards"
-              :key="plan.name"
-              class="scroll-animate"
-              :style="{ transitionDelay: `${index * 100}ms` }"
-            >
-              <div class="relative h-full overflow-hidden rounded-[1.8rem] border border-white/10 bg-[#0b1628]/75 p-8 shadow-[0_24px_90px_rgba(2,12,27,0.28)]" :class="{ 'border-sky-400/40 shadow-[0_28px_100px_rgba(14,165,233,0.16)]': plan.popular }">
-                <div v-if="plan.popular" class="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-sky-500 to-cyan-500 px-4 py-1 text-xs font-semibold text-white">
-                  Paling Populer
+        <section v-if="pricingCards.length" id="service-pricing" class="public-section public-anchor">
+          <div class="public-container">
+            <div class="reveal public-section-heading mb-12">
+              <span class="public-eyebrow mb-3">Pilihan Paket</span>
+              <h2 class="public-section-title mb-3">{{ page.pricingTitle }}</h2>
+              <p class="text-[0.9375rem] leading-relaxed text-slate-500">{{ page.pricingDescription }}</p>
+            </div>
+
+            <div class="reveal-stagger grid gap-5 xl:grid-cols-3">
+              <article v-for="plan in pricingCards" :key="plan.name" class="reveal-item public-card p-6">
+                <div class="flex items-start justify-between gap-4">
+                  <div>
+                    <p class="text-xs font-medium uppercase tracking-wider text-slate-500">{{ plan.period }}</p>
+                    <h3 class="mt-1.5 text-base font-semibold text-slate-900">{{ plan.name }}</h3>
+                  </div>
+                  <span v-if="plan.popular" :class="['rounded-full px-2.5 py-0.5 text-xs font-semibold', accentTheme.tag]">Paling dipilih</span>
                 </div>
 
-                <div class="mb-6 text-center">
-                  <h3 class="mb-2 text-2xl font-bold text-white">{{ plan.name }}</h3>
-                  <div class="flex items-baseline justify-center gap-1">
-                    <span class="text-4xl font-bold text-white">Rp{{ plan.price }}</span>
-                    <span class="text-slate-400">{{ plan.period }}</span>
+                <p class="mt-5 text-2xl font-bold text-slate-900">{{ plan.price }}</p>
+
+                <div class="mt-5 grid gap-2 rounded-xl bg-slate-50 p-4">
+                  <div v-for="(specValue, specLabel) in plan.specs" :key="specLabel" class="flex items-center justify-between gap-4 text-sm text-slate-600">
+                    <span class="capitalize">{{ specLabel }}</span>
+                    <span class="font-semibold text-slate-900">{{ specValue }}</span>
                   </div>
                 </div>
 
-                <div class="mb-6 space-y-3 rounded-[1.35rem] border border-white/8 bg-white/[0.03] p-4">
-                  <div v-for="(value, key) in plan.specs" :key="key" class="flex items-center justify-between gap-4 text-sm">
-                    <span class="text-slate-400">{{ key }}</span>
-                    <span class="text-right font-medium text-white">{{ value }}</span>
-                  </div>
-                </div>
-
-                <ul class="mb-8 space-y-3">
-                  <li v-for="feature in plan.features" :key="feature" class="flex items-center gap-3 text-sm text-slate-300">
-                    <CheckCircle class="h-4 w-4 flex-shrink-0 text-sky-400" />
-                    {{ feature }}
+                <ul class="mt-5 space-y-2.5 text-sm text-slate-700">
+                  <li v-for="feature in plan.features" :key="feature" class="flex items-center gap-2.5">
+                    <Check :class="['h-3.5 w-3.5 shrink-0', accentTheme.iconColor]" />
+                    <span>{{ feature }}</span>
                   </li>
                 </ul>
 
-                <AButton :variant="plan.popular ? 'primary' : 'secondary'" class="w-full justify-center" @click="goToFooterSecondaryCta">
-                  Pilih Paket
-                </AButton>
-              </div>
+                <div class="mt-5">
+                  <button type="button" class="public-button public-button-secondary w-full text-sm" @click="goToFooterSecondaryCta">
+                    {{ page.ctaSecondary }}
+                  </button>
+                </div>
+              </article>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section v-if="page.extraSection" id="service-extra" class="section-py relative">
-        <div class="container-custom relative z-10">
-          <div class="mx-auto max-w-5xl">
-            <div class="mx-auto mb-12 max-w-3xl text-center md:mb-16">
-              <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2">
-                <span class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-300">Kapabilitas Tambahan</span>
-              </div>
-              <h2 class="mb-5 text-3xl font-bold text-white md:text-5xl">
-                {{ page.extraSection.title }}
-              </h2>
-              <p class="text-lg leading-8 text-slate-400">
-                {{ page.extraSection.description }}
-              </p>
+        <section v-if="page.extraSection" id="service-extra" class="public-section public-anchor">
+          <div class="public-container">
+            <div class="reveal public-section-heading mb-12">
+              <span class="public-eyebrow mb-3">Ruang Lingkup Tambahan</span>
+              <h2 class="public-section-title mb-3">{{ page.extraSection.title }}</h2>
+              <p class="text-[0.9375rem] leading-relaxed text-slate-500">{{ page.extraSection.description }}</p>
             </div>
 
-            <div v-if="page.extraSection.type === 'badge-grid'" class="grid grid-cols-2 gap-4 md:grid-cols-4">
-              <div
-                v-for="item in page.extraSection.items"
-                :key="item.label"
-                class="rounded-[1.4rem] border border-white/10 bg-[#0b1628]/72 px-4 py-5 text-center text-sm text-white shadow-[0_20px_70px_rgba(2,12,27,0.22)] transition-colors"
-                :class="page.accent === 'violet' ? 'hover:border-violet-500/30' : page.accent === 'cyan' ? 'hover:border-cyan-500/30' : 'hover:border-sky-500/30'"
-              >
-                {{ item.label }}
-              </div>
+            <div v-if="page.extraSection.type === 'badge-grid'" class="reveal-stagger grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              <article v-for="(item, index) in extraItems" :key="`${item.label}-${index}`" class="reveal-item public-card p-6">
+                <p class="text-xs font-medium uppercase tracking-wider text-slate-500">{{ item.label || `Item ${index + 1}` }}</p>
+                <p class="mt-2 text-base font-semibold text-slate-900">{{ item.text || item.title }}</p>
+                <p v-if="item.description" class="mt-2 text-sm leading-relaxed text-slate-500">{{ item.description }}</p>
+              </article>
             </div>
 
-            <div v-else-if="page.extraSection.type === 'price-grid'" class="mx-auto grid max-w-4xl grid-cols-2 gap-4 md:grid-cols-4">
-              <div
-                v-for="item in page.extraSection.items"
-                :key="item.title"
-                class="rounded-[1.4rem] border border-white/10 bg-[#0b1628]/72 p-6 text-center shadow-[0_20px_70px_rgba(2,12,27,0.22)] transition-colors"
-                :class="item.popular ? 'border-violet-500/30' : 'hover:border-violet-500/30'"
-              >
-                <div class="mb-2 text-2xl font-bold text-white">{{ item.title }}</div>
-                <span class="font-semibold text-violet-400">Rp{{ item.price }}{{ item.suffix }}</span>
+            <div v-else-if="page.extraSection.type === 'timeline-grid'" class="reveal-stagger grid gap-5 lg:grid-cols-2">
+              <article v-for="(item, index) in extraItems" :key="`${item.step}-${index}`" class="reveal-item public-card p-6">
+                <p class="text-xs font-medium uppercase tracking-wider text-slate-500">{{ item.step || `Tahap ${index + 1}` }}</p>
+                <h3 class="mt-2 text-base font-semibold text-slate-900">{{ item.title || item.label }}</h3>
+                <p class="mt-2 text-sm leading-relaxed text-slate-500">{{ item.description || item.text }}</p>
+              </article>
+            </div>
+
+            <div v-else-if="page.extraSection.type === 'checklist'" class="reveal public-card p-6">
+              <div class="grid gap-3 md:grid-cols-2">
+                <div v-for="(item, index) in extraItems" :key="`${item.text}-${index}`" class="flex items-center gap-2.5 rounded-lg bg-slate-50 px-3 py-3 text-sm text-slate-700">
+                  <Check :class="['h-3.5 w-3.5 shrink-0', accentTheme.iconColor]" />
+                  <span>{{ item.text || item.title || item.description }}</span>
+                </div>
               </div>
             </div>
 
-            <div v-else-if="page.extraSection.type === 'timeline-grid'" class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-              <div v-for="item in page.extraSection.items" :key="item.step" class="rounded-[1.6rem] border border-white/10 bg-[#0b1628]/72 p-6 shadow-[0_20px_70px_rgba(2,12,27,0.22)]">
-                <div class="mb-4 text-4xl font-bold text-violet-500/30">{{ item.step }}</div>
-                <h3 class="mb-2 text-lg font-semibold text-white">{{ item.title }}</h3>
-                <p class="text-sm leading-7 text-slate-400">{{ item.description }}</p>
-              </div>
+            <div v-else-if="page.extraSection.type === 'price-grid'" class="reveal-stagger grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              <article v-for="(item, index) in extraItems" :key="`${item.title}-${index}`" class="reveal-item public-card p-6">
+                <div class="flex items-start justify-between gap-4">
+                  <h3 class="text-lg font-semibold text-slate-900">{{ item.title || item.label }}</h3>
+                  <span v-if="item.popular" :class="['rounded-full px-2.5 py-0.5 text-xs font-semibold', accentTheme.tag]">Rekomendasi</span>
+                </div>
+                <p class="mt-3 text-2xl font-bold text-slate-900">{{ item.price }}<span v-if="item.suffix" class="text-sm font-medium text-slate-500"> {{ item.suffix }}</span></p>
+                <p class="mt-2 text-sm leading-relaxed text-slate-500">{{ item.description || item.text }}</p>
+              </article>
             </div>
+          </div>
+        </section>
 
-            <div v-else-if="page.extraSection.type === 'checklist'" class="rounded-[1.8rem] border border-white/10 bg-[#0b1628]/72 p-8 shadow-[0_24px_90px_rgba(2,12,27,0.24)] md:p-12">
-              <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div v-for="item in page.extraSection.items" :key="item.text" class="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3">
-                  <CheckCircle class="h-5 w-5 flex-shrink-0 text-cyan-400" />
-                  <span class="text-slate-300">{{ item.text }}</span>
+        <section id="service-contact" class="public-section public-anchor pt-0">
+          <div class="public-container">
+            <div class="reveal public-card-muted px-6 py-8 md:px-10 md:py-10">
+              <div class="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+                <div>
+                  <span class="public-kicker mb-3">
+                    <Headphones class="h-3.5 w-3.5 text-orange-500" />
+                    Koordinasi berikutnya
+                  </span>
+                  <h2 class="public-section-title mb-3">{{ page.ctaTitle }}</h2>
+                  <p class="text-sm leading-relaxed text-slate-500">{{ page.ctaDescription }}</p>
+                </div>
+
+                <div class="flex flex-col gap-3 sm:flex-row lg:justify-end">
+                  <button type="button" class="public-button public-button-primary" @click="goToFooterPrimaryCta">
+                    {{ page.ctaPrimary }}
+                    <ArrowRight class="h-4 w-4" />
+                  </button>
+                  <button type="button" class="public-button public-button-secondary" @click="goToFooterSecondaryCta">
+                    {{ page.ctaSecondary }}
+                  </button>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </template>
+    </main>
 
-      <section id="service-contact" class="section-py relative">
-        <div class="container-custom">
-          <div class="relative mx-auto max-w-4xl overflow-hidden rounded-[2rem] border border-white/10 px-6 py-12 text-center shadow-[0_24px_90px_rgba(2,12,27,0.38)] md:px-10 md:py-14" :class="accentPanelClass">
-            <div :class="['absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent to-transparent', accentLineClass]" />
-            <div class="absolute inset-0 bg-gradient-to-r from-sky-500/8 via-cyan-500/8 to-violet-500/8" />
-
-            <div class="relative z-10">
-              <p class="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-sky-300">Diskusikan Kebutuhan Anda</p>
-              <h2 class="mb-4 text-3xl font-bold text-white md:text-4xl">
-                {{ page.ctaTitle }}
-              </h2>
-              <p class="mx-auto mb-8 max-w-2xl text-lg leading-8 text-slate-300">
-                {{ page.ctaDescription }}
-              </p>
-              <div class="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <AButton variant="primary" size="lg" @click="goToFooterPrimaryCta">
-                  {{ page.ctaPrimary }}
-                  <ArrowRight class="ml-2 h-5 w-5" />
-                </AButton>
-                <AButton variant="secondary" size="lg" @click="goToFooterSecondaryCta">
-                  <HeadphonesIcon class="mr-2 h-5 w-5" />
-                  {{ page.ctaSecondary }}
-                </AButton>
-              </div>
-              <button type="button" class="mt-5 text-sm font-medium text-slate-400 transition-colors hover:text-slate-200" @click="goToRelatedAction">
-                Lihat ringkasan semua layanan
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-    </template>
-
-    <OFooter />
+    <PublicFooter />
   </div>
 </template>
