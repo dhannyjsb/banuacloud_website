@@ -139,8 +139,9 @@ onUnmounted(() => {
       <!-- Logo -->
       <div class="h-16 flex items-center px-6 border-b border-white/10">
         <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 flex items-center justify-center">
-            <span class="text-white font-bold text-sm">B</span>
+          <div :class="['flex items-center justify-center overflow-hidden', siteSettings.logoUrl ? 'h-7 w-7 rounded-md' : 'w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500']">
+            <img v-if="siteSettings.logoUrl" :src="siteSettings.logoUrl" :alt="siteSettings.siteName" class="h-full w-full scale-[1.03] object-cover" />
+            <span v-else class="text-white font-bold text-sm">B</span>
           </div>
           <span
             :class="[

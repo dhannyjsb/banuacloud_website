@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UploadCompanyLogoRequest;
 use App\Models\SiteSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 class SettingsController extends Controller
 {
@@ -64,12 +67,47 @@ class SettingsController extends Controller
         ]);
     }
 
+    public function uploadLogo(UploadCompanyLogoRequest $request): JsonResponse
+    {
+        $settings = $this->getSettingsRecord();
+        $logo = $request->file('logo');
+
+        $directory = public_path('uploads/company');
+
+        File::ensureDirectoryExists($directory);
+
+        $filename = sprintf(
+            'company-logo-%s-%s.%s',
+            now()->format('YmdHis'),
+            Str::lower(Str::random(8)),
+            $logo->getClientOriginalExtension(),
+        );
+
+        $logo->move($directory, $filename);
+
+        $previousLogo = $settings->logo_url;
+        $logoUrl = '/uploads/company/' . $filename;
+
+        $settings->forceFill([
+            'logo_url' => $logoUrl,
+        ])->save();
+
+        if ($previousLogo && str_starts_with($previousLogo, '/uploads/company/')) {
+            File::delete(public_path(ltrim($previousLogo, '/')));
+        }
+
+        return response()->json([
+            'settings' => $this->formatSettings($settings->fresh()),
+        ]);
+    }
+
     private function getSettingsRecord(): SiteSetting
     {
         return SiteSetting::query()->firstOrCreate([], [
             'maintenance_mode' => false,
             'site_name' => 'Banua Cloud Nusantara',
-            'site_description' => 'Mitra solusi IT tepercaya di Indonesia',
+            'site_description' => 'Mitra infrastruktur IT, cloud, dan jaringan untuk bisnis di Indonesia',
+            'logo_url' => env('VITE_LOGO_URL', ''),
             'company_name' => 'Banua Cloud Nusantara',
             'company_email' => 'support@banuacloud.id',
             'company_phone' => '+62 812-3456-7890',
@@ -93,6 +131,7 @@ class SettingsController extends Controller
             'maintenanceMode' => $settings->maintenance_mode,
             'siteName' => $settings->site_name,
             'siteDescription' => $settings->site_description,
+            'logoUrl' => $settings->logo_url ?: env('VITE_LOGO_URL', ''),
             'companyName' => $settings->company_name,
             'companyEmail' => $settings->company_email,
             'companyPhone' => $settings->company_phone,

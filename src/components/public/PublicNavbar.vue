@@ -42,7 +42,10 @@ const goToLearnMore = () => {
     <div class="public-container">
       <div class="public-nav-shell">
         <button type="button" class="public-logo" @click="navigateHome">
-          <span class="public-logo-mark">B</span>
+          <span :class="['public-logo-mark overflow-hidden', siteSettings.logoUrl ? 'h-8 w-8 rounded-lg' : '']">
+            <img v-if="siteSettings.logoUrl" :src="siteSettings.logoUrl" :alt="siteSettings.siteName" class="h-full w-full scale-[1.03] object-cover" />
+            <span v-else>B</span>
+          </span>
           <span class="text-sm font-semibold tracking-tight text-slate-900">{{ siteSettings.siteName }}</span>
         </button>
 

@@ -63,7 +63,10 @@ const goToService = (slug: string) => {
           <div class="grid gap-8 md:grid-cols-2 xl:grid-cols-4">
             <div class="space-y-4">
               <div class="public-logo">
-                <span class="public-logo-mark">B</span>
+                <span :class="['public-logo-mark overflow-hidden', siteSettings.logoUrl ? 'h-6 w-6 rounded-md' : '']">
+                  <img v-if="siteSettings.logoUrl" :src="siteSettings.logoUrl" :alt="siteSettings.siteName" class="h-full w-full object-cover" />
+                  <span v-else>B</span>
+                </span>
                 <span>
                   <span class="block text-sm font-semibold text-slate-900">{{ siteSettings.siteName }}</span>
                   <span class="block text-xs text-slate-500">Cloud &amp; managed IT</span>

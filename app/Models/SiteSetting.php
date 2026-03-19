@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
     'maintenance_mode',
     'site_name',
     'site_description',
+    'logo_url',
     'company_name',
     'company_email',
     'company_phone',

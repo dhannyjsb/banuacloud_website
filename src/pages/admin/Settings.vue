@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { Save, Shield, Globe, Mail, Phone, MapPin, Bell, Lock } from 'lucide-vue-next';
+import { Save, Shield, Globe, Mail, Phone, MapPin, Bell, Lock, Upload, Loader2 } from 'lucide-vue-next';
 import { emitSiteSettingsUpdated } from '../../composables/useSiteSettings';
 import {
   defaultSiteSettings,
   fetchAdminSettings,
   updateAdminPassword,
   type SiteSettings,
+  updateAdminLogo,
   updateAdminSettings,
 } from '../../lib/siteApi';
 import { useAuthStore } from '../../stores/auth';
@@ -18,10 +19,16 @@ const isLoading = ref(false);
 const showSuccess = ref(false);
 const activeTab = ref('general');
 const errorMessage = ref('');
+const logoErrorMessage = ref('');
+const logoSuccessMessage = ref('');
 const passwordErrorMessage = ref('');
 const passwordSuccessMessage = ref('');
 const isUpdatingPassword = ref(false);
+const isUploadingLogo = ref(false);
 const authStore = useAuthStore();
+const logoInputRef = ref<HTMLInputElement | null>(null);
+const selectedLogoFile = ref<File | null>(null);
+const selectedLogoPreview = ref('');
 
 const settings = reactive<SiteSettings>({ ...defaultSiteSettings });
 const passwordForm = reactive({
@@ -115,6 +122,78 @@ const resetPasswordForm = () => {
   passwordForm.newPasswordConfirmation = '';
 };
 
+const currentLogoPreview = computed(() => selectedLogoPreview.value || settings.logoUrl);
+
+const clearLogoSelection = () => {
+  if (selectedLogoPreview.value.startsWith('blob:')) {
+    URL.revokeObjectURL(selectedLogoPreview.value);
+  }
+
+  selectedLogoPreview.value = '';
+  selectedLogoFile.value = null;
+
+  if (logoInputRef.value) {
+    logoInputRef.value.value = '';
+  }
+};
+
+const openLogoPicker = () => {
+  logoInputRef.value?.click();
+};
+
+const handleLogoSelected = (event: Event) => {
+  logoErrorMessage.value = '';
+  logoSuccessMessage.value = '';
+
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+
+  if (!file) {
+    clearLogoSelection();
+    return;
+  }
+
+  if (!file.type.startsWith('image/')) {
+    logoErrorMessage.value = 'File logo harus berupa gambar yang valid.';
+    clearLogoSelection();
+    return;
+  }
+
+  clearLogoSelection();
+  selectedLogoFile.value = file;
+  selectedLogoPreview.value = URL.createObjectURL(file);
+};
+
+const handleLogoUpload = async () => {
+  logoErrorMessage.value = '';
+  logoSuccessMessage.value = '';
+
+  if (!selectedLogoFile.value) {
+    logoErrorMessage.value = 'Pilih file logo terlebih dahulu.';
+    return;
+  }
+
+  isUploadingLogo.value = true;
+
+  try {
+    await authStore.ensureAuthState();
+
+    if (!authStore.token) {
+      throw new Error('Admin session not found. Please sign in again.');
+    }
+
+    const payload = await updateAdminLogo(authStore.token, selectedLogoFile.value);
+    Object.assign(settings, payload.settings);
+    emitSiteSettingsUpdated();
+    clearLogoSelection();
+    logoSuccessMessage.value = 'Logo perusahaan berhasil diperbarui.';
+  } catch (error) {
+    logoErrorMessage.value = error instanceof Error ? error.message : 'Failed to upload company logo.';
+  } finally {
+    isUploadingLogo.value = false;
+  }
+};
+
 const handleChangePassword = async () => {
   isUpdatingPassword.value = true;
   passwordErrorMessage.value = '';
@@ -145,6 +224,10 @@ const handleChangePassword = async () => {
     isUpdatingPassword.value = false;
   }
 };
+
+onUnmounted(() => {
+  clearLogoSelection();
+});
 
 </script>
 
@@ -270,6 +353,53 @@ const handleChangePassword = async () => {
         <!-- Company Settings -->
         <div v-if="activeTab === 'company'" class="glass-md p-6 rounded-xl border border-white/10 space-y-6">
           <h3 class="text-lg font-semibold text-white">Company Information</h3>
+
+          <div class="space-y-4 rounded-xl border border-white/10 bg-white/5 p-5">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div class="flex items-center gap-4">
+                <div class="flex h-[4.25rem] w-[4.25rem] items-center justify-center overflow-hidden rounded-[1.1rem] border border-white/10 bg-transparent">
+                  <img v-if="currentLogoPreview" :src="currentLogoPreview" :alt="settings.siteName" class="h-full w-full scale-[1.03] object-cover" />
+                  <span v-else class="text-3xl font-bold text-slate-500">B</span>
+                </div>
+                <div>
+                  <p class="text-sm font-medium text-white">Logo Perusahaan</p>
+                  <p class="mt-1 text-sm leading-relaxed text-slate-400">Upload logo utama untuk navbar, footer, maintenance page, dan halaman admin.</p>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap gap-3">
+                <input
+                  ref="logoInputRef"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  class="hidden"
+                  @change="handleLogoSelected"
+                />
+                <button
+                  type="button"
+                  class="flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition-colors hover:bg-white/10"
+                  @click="openLogoPicker"
+                >
+                  <Upload class="h-4 w-4" />
+                  Pilih Logo
+                </button>
+                <button
+                  type="button"
+                  class="flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  :disabled="isUploadingLogo || !selectedLogoFile"
+                  @click="handleLogoUpload"
+                >
+                  <Loader2 v-if="isUploadingLogo" class="h-4 w-4 animate-spin" />
+                  <Upload v-else class="h-4 w-4" />
+                  {{ isUploadingLogo ? 'Uploading...' : 'Upload Logo' }}
+                </button>
+              </div>
+            </div>
+
+            <p v-if="selectedLogoFile" class="text-xs text-slate-400">File dipilih: {{ selectedLogoFile.name }}</p>
+            <p v-if="logoSuccessMessage" class="text-sm text-green-400">{{ logoSuccessMessage }}</p>
+            <p v-if="logoErrorMessage" class="text-sm text-red-400">{{ logoErrorMessage }}</p>
+          </div>
 
           <div class="space-y-2">
             <label class="text-sm font-medium text-slate-300">Company Name</label>

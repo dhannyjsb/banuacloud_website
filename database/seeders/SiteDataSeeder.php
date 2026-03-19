@@ -21,6 +21,7 @@ class SiteDataSeeder extends Seeder
                 'maintenance_mode' => filter_var(env('VITE_MAINTENANCE_MODE', false), FILTER_VALIDATE_BOOLEAN),
                 'site_name' => env('VITE_COMPANY_NAME', 'Banua Cloud Nusantara'),
                 'site_description' => env('VITE_COMPANY_DESCRIPTOR', 'Mitra infrastruktur IT, cloud, dan jaringan untuk bisnis di Indonesia'),
+                'logo_url' => env('VITE_LOGO_URL', ''),
                 'company_name' => env('VITE_COMPANY_FULL_NAME', env('VITE_COMPANY_NAME', env('APP_NAME', 'Banua Cloud Nusantara'))),
                 'company_email' => env('VITE_SUPPORT_EMAIL', 'support@banuacloud.id'),
                 'company_phone' => env('VITE_SUPPORT_PHONE', '+62 812-3456-7890'),

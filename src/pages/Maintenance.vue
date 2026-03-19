@@ -22,7 +22,7 @@ const supportPhone = computed(() => siteSettings.value.companyPhone);
 const supportPhoneRaw = computed(() => siteSettings.value.companyPhone.replace(/[^\d+]/g, ''));
 const whatsappRaw = computed(() => siteSettings.value.companyWhatsapp.replace(/\D/g, ''));
 const companyDescriptor = computed(() => siteSettings.value.siteDescription);
-const logoUrl = '';
+const logoUrl = computed(() => siteSettings.value.logoUrl);
 
 const publicServices = computed(() => {
   return services.value.slice(0, 4).map((service, index) => ({
@@ -64,11 +64,11 @@ const progressSteps = [
       <div class="mb-3 sm:mb-4 text-center">
         <div class="inline-flex items-center gap-3 sm:gap-4">
           <div class="relative">
-            <div class="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 flex items-center justify-center animate-pulse-glow overflow-hidden">
-              <img v-if="logoUrl" :src="logoUrl" :alt="companyName" class="w-full h-full object-cover" />
+            <div :class="[logoUrl ? 'w-10 h-10 sm:w-11 sm:h-11 lg:w-14 lg:h-14 rounded-xl' : 'w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 animate-pulse-glow', 'flex items-center justify-center overflow-hidden']">
+              <img v-if="logoUrl" :src="logoUrl" :alt="companyName" class="w-full h-full scale-[1.03] object-cover" />
               <Cloud v-else class="w-6 h-6 sm:w-8 sm:h-8 lg:w-9 lg:h-9 text-white" />
             </div>
-            <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-sky-400 to-cyan-500 blur-xl opacity-50" />
+            <div v-if="!logoUrl" class="absolute inset-0 rounded-xl bg-gradient-to-br from-sky-400 to-cyan-500 blur-xl opacity-50" />
           </div>
           <div class="text-left">
             <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-white tracking-tight">{{ companyName }}</h1>

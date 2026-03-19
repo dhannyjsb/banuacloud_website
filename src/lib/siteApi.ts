@@ -2,6 +2,7 @@ export interface SiteSettings {
   maintenanceMode: boolean;
   siteName: string;
   siteDescription: string;
+  logoUrl: string;
   companyName: string;
   companyEmail: string;
   companyPhone: string;
@@ -223,6 +224,7 @@ export const defaultSiteSettings: SiteSettings = {
   maintenanceMode: import.meta.env.VITE_MAINTENANCE_MODE === 'true',
   siteName: import.meta.env.VITE_COMPANY_NAME || 'Banua Cloud Nusantara',
   siteDescription: import.meta.env.VITE_COMPANY_DESCRIPTOR || 'Mitra infrastruktur IT, cloud, dan jaringan untuk bisnis di Indonesia',
+  logoUrl: import.meta.env.VITE_LOGO_URL || '',
   companyName: import.meta.env.VITE_COMPANY_FULL_NAME || import.meta.env.VITE_COMPANY_NAME || 'Banua Cloud Nusantara',
   companyEmail: import.meta.env.VITE_SUPPORT_EMAIL || 'support@banuacloud.id',
   companyPhone: import.meta.env.VITE_SUPPORT_PHONE || '+62 812-3456-7890',
@@ -556,6 +558,22 @@ export async function updateAdminSettings(token: string, payload: { settings: Si
       method: 'PUT',
       headers: authHeaders(token),
       body: JSON.stringify(payload.settings),
+    }),
+  );
+}
+
+export async function updateAdminLogo(token: string, logo: File) {
+  const formData = new FormData();
+  formData.append('logo', logo);
+
+  return parseResponse<{ settings: SiteSettings }>(
+    await fetch(`${API_BASE_URL}/admin/settings/logo`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
     }),
   );
 }

@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\SiteDataController;
 use App\Http\Controllers\Api\Admin\ContentController;
 use App\Http\Controllers\Api\Admin\ServicesController;
 use App\Http\Controllers\Api\Admin\SettingsController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\SiteDataController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function (): void {
@@ -33,4 +33,5 @@ Route::middleware(['auth:sanctum', 'admin.access'])->prefix('admin')->group(func
 
     Route::get('/settings', [SettingsController::class, 'show']);
     Route::put('/settings', [SettingsController::class, 'update']);
+    Route::post('/settings/logo', [SettingsController::class, 'uploadLogo']);
 });
