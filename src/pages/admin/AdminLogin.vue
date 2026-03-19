@@ -44,7 +44,7 @@ const handleLogin = async () => {
       <!-- Logo -->
       <div class="text-center mb-8">
         <div :class="['inline-flex items-center justify-center mb-4 overflow-hidden', siteSettings.logoUrl ? 'h-14 w-14 rounded-[1rem]' : 'w-16 h-16 rounded-2xl bg-gradient-to-br from-sky-500 to-cyan-500']">
-          <img v-if="siteSettings.logoUrl" :src="siteSettings.logoUrl" :alt="siteSettings.siteName" class="h-full w-full scale-[1.03] object-cover" />
+          <img v-if="siteSettings.logoUrl" :src="siteSettings.logoUrl" :alt="siteSettings.siteName" class="h-full w-full scale-[1.00] object-cover" />
           <span v-else class="text-white font-bold text-2xl">B</span>
         </div>
         <h1 class="text-2xl font-bold text-white">{{ siteSettings.siteName }}</h1>

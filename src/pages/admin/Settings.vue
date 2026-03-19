@@ -358,7 +358,7 @@ onUnmounted(() => {
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div class="flex items-center gap-4">
                 <div class="flex h-[4.25rem] w-[4.25rem] items-center justify-center overflow-hidden rounded-[1.1rem] border border-white/10 bg-transparent">
-                  <img v-if="currentLogoPreview" :src="currentLogoPreview" :alt="settings.siteName" class="h-full w-full scale-[1.03] object-cover" />
+                  <img v-if="currentLogoPreview" :src="currentLogoPreview" :alt="settings.siteName" class="h-full w-full scale-[1.00] object-cover" />
                   <span v-else class="text-3xl font-bold text-slate-500">B</span>
                 </div>
                 <div>

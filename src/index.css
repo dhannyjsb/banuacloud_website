@@ -274,10 +274,16 @@
     width: 2.5rem;
     height: 2.5rem;
     border-radius: 0.75rem;
+    background: linear-gradient(135deg, #0f766e 0%, #115e59 100%);
     box-shadow: 0 2px 8px rgba(15, 118, 110, 0.25);
     color: #fff;
     font-weight: 800;
     font-size: 1rem;
+}
+
+.public-logo-mark.is-image {
+    background: transparent;
+    box-shadow: none;
 }
 
 .public-nav-link {

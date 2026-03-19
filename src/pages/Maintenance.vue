@@ -65,7 +65,7 @@ const progressSteps = [
         <div class="inline-flex items-center gap-3 sm:gap-4">
           <div class="relative">
             <div :class="[logoUrl ? 'w-10 h-10 sm:w-11 sm:h-11 lg:w-14 lg:h-14 rounded-xl' : 'w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 animate-pulse-glow', 'flex items-center justify-center overflow-hidden']">
-              <img v-if="logoUrl" :src="logoUrl" :alt="companyName" class="w-full h-full scale-[1.03] object-cover" />
+              <img v-if="logoUrl" :src="logoUrl" :alt="companyName" class="w-full h-full scale-[1.00] object-cover" />
               <Cloud v-else class="w-6 h-6 sm:w-8 sm:h-8 lg:w-9 lg:h-9 text-white" />
             </div>
             <div v-if="!logoUrl" class="absolute inset-0 rounded-xl bg-gradient-to-br from-sky-400 to-cyan-500 blur-xl opacity-50" />
