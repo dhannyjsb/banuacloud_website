@@ -49,21 +49,20 @@ const goToLearnMore = () => {
           <span class="text-sm font-semibold tracking-tight text-slate-900">{{ siteSettings.siteName }}</span>
         </button>
 
-        <nav class="hidden items-center gap-7 lg:flex">
-          <button type="button" class="public-nav-link" @click="goToHomeSection('#services')">Layanan</button>
-          <button type="button" class="public-nav-link" @click="goToHomeSection('#advantages')">Keunggulan</button>
-          <button type="button" class="public-nav-link" @click="goToHomeSection('#testimonials')">Testimoni</button>
-          <button type="button" class="public-nav-link" @click="goToHomeSection('#contact')">Kontak</button>
-        </nav>
+        <div class="hidden flex-1 items-center justify-end gap-4 lg:flex xl:gap-5">
+          <nav class="flex items-center gap-7 xl:gap-8">
+            <button type="button" class="public-nav-link" @click="navigateHome">Beranda</button>
+            <button type="button" class="public-nav-link" @click="goToHomeSection('#services')">Layanan</button>
+            <button type="button" class="public-nav-link" @click="goToHomeSection('#advantages')">Keunggulan</button>
+            <button type="button" class="public-nav-link" @click="goToHomeSection('#contact')">Kontak</button>
+          </nav>
 
-        <div class="hidden items-center gap-2 lg:flex">
-          <button type="button" class="public-button public-button-ghost" @click="goToHomeSection('#services')">
-            Lihat Layanan
-          </button>
-          <button type="button" class="public-button public-button-primary" @click="goToLearnMore">
-            Profil Perusahaan
-            <ArrowRight class="h-3.5 w-3.5" />
-          </button>
+          <div class="flex items-center">
+            <button type="button" class="public-button public-button-primary" @click="goToLearnMore">
+              Profil Perusahaan
+              <ArrowRight class="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
 
         <button
@@ -80,9 +79,9 @@ const goToLearnMore = () => {
 
       <div v-if="isMenuOpen" class="border-t border-slate-100 pb-4 lg:hidden">
         <div class="space-y-1 pt-3">
+          <button type="button" class="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" @click="navigateHome">Beranda</button>
           <button type="button" class="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" @click="goToHomeSection('#services')">Layanan</button>
           <button type="button" class="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" @click="goToHomeSection('#advantages')">Keunggulan</button>
-          <button type="button" class="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" @click="goToHomeSection('#testimonials')">Testimoni</button>
           <button type="button" class="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" @click="goToHomeSection('#contact')">Kontak</button>
           <div class="pt-2">
             <button type="button" class="public-button public-button-primary w-full" @click="goToLearnMore">
