@@ -46,7 +46,7 @@ const goToLearnMore = () => {
             <img v-if="siteSettings.logoUrl" :src="siteSettings.logoUrl" :alt="siteSettings.siteName" class="h-full w-full scale-[1.00] object-cover" />
             <span v-else>B</span>
           </span>
-          <span class="text-sm font-semibold tracking-tight text-slate-900">{{ siteSettings.siteName }}</span>
+          <span class="max-w-[11.5rem] truncate text-left text-[0.8125rem] font-semibold tracking-tight text-slate-900 sm:max-w-none sm:text-sm">{{ siteSettings.siteName }}</span>
         </button>
 
         <div class="hidden flex-1 items-center justify-end gap-4 lg:flex xl:gap-5">

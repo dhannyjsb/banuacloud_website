@@ -177,7 +177,7 @@ const handleSubmit = async () => {
                   <p v-else class="text-slate-500">Tim kami akan membalas melalui email atau WhatsApp yang Anda isi.</p>
                 </div>
 
-                <button type="submit" class="public-button public-button-primary min-w-44" :disabled="isSubmitting">
+                <button type="submit" class="public-button public-button-primary min-w-44 w-full md:w-auto" :disabled="isSubmitting">
                   <LoaderCircle v-if="isSubmitting" class="h-4 w-4 animate-spin" />
                   <SendHorizonal v-else class="h-4 w-4" />
                   {{ isSubmitting ? 'Mengirim...' : 'Kirim Pesan' }}
@@ -236,15 +236,15 @@ const handleSubmit = async () => {
               <div class="space-y-2.5 text-sm text-slate-600">
                 <a :href="`mailto:${siteSettings.companyEmail}`" class="flex items-start gap-2.5 transition hover:text-slate-900">
                   <Mail class="mt-0.5 h-3.5 w-3.5 text-teal-600" />
-                  <span>{{ siteSettings.companyEmail }}</span>
+                  <span class="min-w-0 break-all">{{ siteSettings.companyEmail }}</span>
                 </a>
                 <a :href="`tel:${siteSettings.companyPhone}`" class="flex items-start gap-2.5 transition hover:text-slate-900">
                   <Phone class="mt-0.5 h-3.5 w-3.5 text-teal-600" />
-                  <span>{{ siteSettings.companyPhone }}</span>
+                  <span class="min-w-0 break-words">{{ siteSettings.companyPhone }}</span>
                 </a>
                 <div class="flex items-start gap-2.5">
                   <MapPin class="mt-0.5 h-3.5 w-3.5 text-teal-600" />
-                  <span>{{ siteSettings.companyAddress }}</span>
+                  <span class="min-w-0 break-words">{{ siteSettings.companyAddress }}</span>
                 </div>
               </div>
             </div>

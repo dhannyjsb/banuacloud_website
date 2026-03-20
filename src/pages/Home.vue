@@ -182,9 +182,9 @@ const scrollToSection = (id: string) => {
 
     <main class="public-main">
       <!-- Hero -->
-      <section class="public-section pt-12 md:pt-20">
+      <section class="public-section pt-10 md:pt-20">
         <div class="public-container">
-          <div class="grid items-start gap-10 lg:grid-cols-[1.25fr_0.75fr] lg:gap-14">
+          <div class="grid items-start gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:gap-14">
             <div class="space-y-8">
               <span class="public-kicker animate-fade-in">
                 <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -202,11 +202,11 @@ const scrollToSection = (id: string) => {
               </div>
 
               <div class="flex flex-col gap-3 sm:flex-row animate-fade-in-up delay-200">
-                <button type="button" class="public-button public-button-primary" @click="goToLearnMore">
+                <button type="button" class="public-button public-button-primary w-full sm:w-auto" @click="goToLearnMore">
                   {{ heroContent.ctaPrimary }}
                   <ArrowRight class="h-4 w-4" />
                 </button>
-                <button type="button" class="public-button public-button-secondary" @click="scrollToSection('services')">
+                <button type="button" class="public-button public-button-secondary w-full sm:w-auto" @click="scrollToSection('services')">
                   {{ heroContent.ctaSecondary }}
                 </button>
               </div>
@@ -217,8 +217,8 @@ const scrollToSection = (id: string) => {
               </div>
             </div>
 
-            <div class="public-card p-6 md:p-8 animate-fade-in-up delay-200">
-              <div class="grid gap-3 grid-cols-3">
+            <div class="public-card p-5 md:p-8 animate-fade-in-up delay-200">
+              <div class="grid grid-cols-1 gap-3 min-[480px]:grid-cols-3">
                 <div v-for="stat in heroStats" :key="stat.label" class="public-stat text-center">
                   <p class="text-2xl font-bold text-slate-900">{{ stat.value }}</p>
                   <p class="mt-1 text-[0.6875rem] font-medium uppercase tracking-wider text-slate-400">{{ stat.label }}</p>
@@ -241,15 +241,15 @@ const scrollToSection = (id: string) => {
                     class="public-card-interactive w-full p-4 text-left"
                     @click="goToService(service.slug)"
                   >
-                    <div class="flex items-center gap-4">
+                    <div class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
                       <div class="public-icon-wrap public-icon-wrap-primary">
                         <component :is="resolveServiceIcon(service.icon)" class="h-5 w-5" />
                       </div>
                       <div class="min-w-0 flex-1">
                         <h3 class="text-sm font-semibold text-slate-900">{{ service.name }}</h3>
-                        <p class="mt-0.5 text-xs text-slate-500 truncate">{{ service.description }}</p>
+                        <p class="mt-0.5 text-xs leading-relaxed text-slate-500 sm:truncate">{{ service.description }}</p>
                       </div>
-                      <span :class="service.usesContactPricing ? 'shrink-0 text-xs font-semibold text-slate-500' : 'shrink-0 text-xs font-semibold text-teal-700'">{{ service.startingPrice }}</span>
+                      <span :class="service.usesContactPricing ? 'text-xs font-semibold text-slate-500 sm:shrink-0' : 'text-xs font-semibold text-teal-700 sm:shrink-0'">{{ service.startingPrice }}</span>
                     </div>
                   </button>
                 </div>
@@ -311,12 +311,12 @@ const scrollToSection = (id: string) => {
                   <component :is="resolveServiceIcon(service.icon)" class="h-5 w-5" />
                 </div>
                 <div class="flex-1 min-w-0">
-                  <div class="flex items-start justify-between gap-3">
+                  <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <h3 class="text-base font-semibold text-slate-900">{{ service.name }}</h3>
                       <p class="mt-0.5 text-xs text-slate-400">{{ service.plans.length || 1 }} opsi tersedia</p>
                     </div>
-                    <span :class="service.usesContactPricing ? 'shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600' : 'shrink-0 rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700'">{{ service.startingPrice }}</span>
+                    <span :class="service.usesContactPricing ? 'inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 sm:shrink-0' : 'inline-flex rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700 sm:shrink-0'">{{ service.startingPrice }}</span>
                   </div>
                 </div>
               </div>
@@ -416,11 +416,11 @@ const scrollToSection = (id: string) => {
               </div>
 
               <div class="flex flex-col gap-3 sm:flex-row lg:justify-end">
-                <button type="button" class="public-button public-button-primary" @click="goToLearnMore">
+                <button type="button" class="public-button public-button-primary w-full sm:w-auto" @click="goToLearnMore">
                   Lihat gambaran lengkap
                   <ArrowRight class="h-4 w-4" />
                 </button>
-                <button type="button" class="public-button public-button-secondary" @click="scrollToSection('contact')">
+                <button type="button" class="public-button public-button-secondary w-full sm:w-auto" @click="scrollToSection('contact')">
                   Hubungi tim
                 </button>
               </div>
