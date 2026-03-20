@@ -7,34 +7,35 @@ use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
+use PharData;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
 use Throwable;
-use ZipArchive;
 
 class MaxMindDatabaseDownloader
 {
-    private const DOWNLOAD_URL = 'https://download.maxmind.com/app/geoip_download';
+    private const DOWNLOAD_URL = 'https://download.maxmind.com/geoip/databases';
 
     public function __construct(private HttpFactory $http) {}
 
     public function download(array $editionIds, bool $force = false, string $trigger = 'manual'): array
     {
+        $accountId = $this->accountId();
         $licenseKey = $this->licenseKey();
 
-        if ($licenseKey === null) {
-            throw new RuntimeException('Isi MAXMIND_LICENSE_KEY atau MAXMIND_API_KEY dulu, baru jalankan command ini.');
+        if ($accountId === null || $licenseKey === null) {
+            throw new RuntimeException('Isi MAXMIND_ACCOUNT_ID dan MAXMIND_LICENSE_KEY dulu. Download database MaxMind tidak bisa memakai API key web service saja.');
         }
 
-        if (! class_exists(ZipArchive::class)) {
-            throw new RuntimeException('PHP extension zip belum aktif, jadi archive MaxMind belum bisa diekstrak otomatis.');
+        if (! class_exists(PharData::class)) {
+            throw new RuntimeException('Extension Phar belum aktif, jadi archive MaxMind tar.gz belum bisa diekstrak otomatis.');
         }
 
         $results = [];
 
         foreach ($editionIds as $editionId) {
-            $results[] = $this->downloadEdition($editionId, $licenseKey, $force, $trigger);
+            $results[] = $this->downloadEdition($editionId, $accountId, $licenseKey, $force, $trigger);
         }
 
         return $results;
@@ -73,7 +74,9 @@ class MaxMindDatabaseDownloader
 
     public function canDownload(): bool
     {
-        return $this->licenseKey() !== null && class_exists(ZipArchive::class);
+        return $this->accountId() !== null
+            && $this->licenseKey() !== null
+            && class_exists(PharData::class);
     }
 
     public function shouldAutoDownload(): bool
@@ -91,7 +94,7 @@ class MaxMindDatabaseDownloader
         return (bool) config('services.maxmind.auto_download_include_isp', false);
     }
 
-    private function downloadEdition(string $editionId, string $licenseKey, bool $force, string $trigger): array
+    private function downloadEdition(string $editionId, int $accountId, string $licenseKey, bool $force, string $trigger): array
     {
         $configuration = $this->editionConfiguration($editionId);
         $destinationPath = $configuration['path'];
@@ -106,7 +109,8 @@ class MaxMindDatabaseDownloader
         }
 
         $temporaryDirectory = $this->temporaryDirectory();
-        $archivePath = $temporaryDirectory . DIRECTORY_SEPARATOR . $editionId . '.zip';
+        $archivePath = $temporaryDirectory . DIRECTORY_SEPARATOR . $editionId . '.tar.gz';
+        $tarPath = $temporaryDirectory . DIRECTORY_SEPARATOR . $editionId . '.tar';
         $extractDirectory = $temporaryDirectory . DIRECTORY_SEPARATOR . 'extract';
 
         File::ensureDirectoryExists(dirname($destinationPath));
@@ -114,17 +118,16 @@ class MaxMindDatabaseDownloader
 
         try {
             $response = $this->http
-                ->accept('application/zip')
+                ->withBasicAuth((string) $accountId, $licenseKey)
+                ->accept('application/gzip')
                 ->timeout($this->downloadTimeout())
                 ->connectTimeout($this->downloadConnectTimeout())
-                ->get(self::DOWNLOAD_URL, [
-                    'edition_id' => $editionId,
-                    'license_key' => $licenseKey,
-                    'suffix' => 'zip',
+                ->get($this->databaseDownloadUrl($editionId), [
+                    'suffix' => 'tar.gz',
                 ]);
 
             if (! $response->successful()) {
-                $body = trim($response->body());
+                $body = $this->normalizeFailureMessage(trim($response->body()), $editionId);
 
                 return $this->persistSyncResult([
                     'editionId' => $editionId,
@@ -138,7 +141,7 @@ class MaxMindDatabaseDownloader
 
             File::put($archivePath, $response->body());
 
-            $this->extractArchive($archivePath, $extractDirectory);
+            $this->extractArchive($archivePath, $tarPath, $extractDirectory);
 
             $databasePath = $this->findDatabaseFile($extractDirectory, $configuration['file']);
 
@@ -157,7 +160,7 @@ class MaxMindDatabaseDownloader
                 'editionId' => $editionId,
                 'path' => $destinationPath,
                 'status' => 'failed',
-                'message' => $throwable->getMessage(),
+                'message' => $this->normalizeFailureMessage($throwable->getMessage(), $editionId),
             ], $trigger, $force);
         } finally {
             File::deleteDirectory($temporaryDirectory);
@@ -221,21 +224,18 @@ class MaxMindDatabaseDownloader
         return $existingSync->checked_at->greaterThan(now()->subHours(6));
     }
 
-    private function extractArchive(string $archivePath, string $extractDirectory): void
+    private function extractArchive(string $archivePath, string $tarPath, string $extractDirectory): void
     {
-        $zipArchive = new ZipArchive;
-        $result = $zipArchive->open($archivePath);
-
-        if ($result !== true) {
-            throw new RuntimeException('Archive MaxMind gagal dibuka.');
-        }
-
         try {
-            if (! $zipArchive->extractTo($extractDirectory)) {
-                throw new RuntimeException('Archive MaxMind gagal diekstrak.');
+            if (! is_file($tarPath)) {
+                $compressedArchive = new PharData($archivePath);
+                $compressedArchive->decompress();
             }
-        } finally {
-            $zipArchive->close();
+
+            $archive = new PharData($tarPath);
+            $archive->extractTo($extractDirectory, null, true);
+        } catch (Throwable $throwable) {
+            throw new RuntimeException('Archive MaxMind gagal diekstrak: ' . $throwable->getMessage(), previous: $throwable);
         }
     }
 
@@ -273,9 +273,25 @@ class MaxMindDatabaseDownloader
         };
     }
 
+    private function databaseDownloadUrl(string $editionId): string
+    {
+        return self::DOWNLOAD_URL . '/' . $editionId . '/download';
+    }
+
     private function temporaryDirectory(): string
     {
         return storage_path('app/maxmind/tmp/' . bin2hex(random_bytes(12)));
+    }
+
+    private function accountId(): ?int
+    {
+        $accountId = config('services.maxmind.account_id');
+
+        if ($accountId === null || $accountId === '') {
+            return null;
+        }
+
+        return is_numeric($accountId) ? (int) $accountId : null;
     }
 
     private function licenseKey(): ?string
@@ -297,5 +313,20 @@ class MaxMindDatabaseDownloader
     private function downloadConnectTimeout(): int
     {
         return max((int) config('services.maxmind.connect_timeout', 2), 10);
+    }
+
+    private function normalizeFailureMessage(string $message, string $editionId): string
+    {
+        $normalizedMessage = trim($message);
+
+        if ($normalizedMessage === '') {
+            return 'Download gagal tanpa pesan error dari server MaxMind.';
+        }
+
+        if (str_contains($normalizedMessage, 'Database edition') && str_contains($normalizedMessage, 'not found')) {
+            return 'Edition ' . $editionId . ' tidak tersedia untuk kredensial ini. Pastikan MAXMIND_ACCOUNT_ID dan MAXMIND_LICENSE_KEY adalah kredensial database download MaxMind, bukan API key web service.';
+        }
+
+        return $normalizedMessage;
     }
 }
