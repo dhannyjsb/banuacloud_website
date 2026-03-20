@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router';
 import {
   LayoutDashboard,
   FileText,
+  MessageSquare,
   Package,
   Settings,
   Lock,
@@ -73,6 +74,11 @@ const menuItems = [
     icon: FileText
   },
   {
+    name: 'Inbox',
+    path: '/admin/inbox',
+    icon: MessageSquare
+  },
+  {
     name: 'Services',
     path: '/admin/services',
     icon: Package
@@ -131,7 +137,7 @@ onUnmounted(() => {
     <!-- Sidebar -->
     <aside
       :class="[
-        'fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#0f172a]/95 backdrop-blur-xl border-r border-white/10 transition-transform duration-300',
+        'fixed inset-y-0 left-0 z-50 overflow-y-auto border-r border-white/10 bg-[#0f172a]/95 backdrop-blur-xl transition-transform duration-300 lg:sticky lg:top-0 lg:h-screen lg:self-start',
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         isSidebarOpen ? 'lg:w-64' : 'lg:w-20'
       ]"
@@ -200,7 +206,7 @@ onUnmounted(() => {
     <!-- Main Content -->
     <div class="flex-1 flex flex-col min-w-0">
       <!-- Header -->
-      <header class="relative z-30 h-16 bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/10 flex items-center px-4 lg:px-8">
+      <header class="sticky top-0 z-30 h-16 shrink-0 border-b border-white/10 bg-[#0f172a]/80 px-4 backdrop-blur-xl lg:px-8 flex items-center">
         <div class="flex items-center gap-4">
           <button
             @click="toggleSidebar"
@@ -280,13 +286,13 @@ onUnmounted(() => {
 
       <!-- Page Content -->
       <main class="relative z-0 flex-1 overflow-auto p-4 lg:p-8">
-        <div class="max-w-7xl mx-auto">
+        <div class="w-full">
           <router-view />
         </div>
       </main>
 
-      <footer class="border-t border-white/10 bg-[#0f172a]/70 px-4 py-4 backdrop-blur-xl lg:px-8">
-        <div class="mx-auto flex max-w-7xl flex-col gap-2 text-sm text-slate-400 md:flex-row md:items-center md:justify-between">
+      <footer class="sticky bottom-0 z-20 shrink-0 border-t border-white/10 bg-[#0f172a]/70 px-4 py-4 backdrop-blur-xl lg:px-8">
+        <div class="flex w-full flex-col gap-2 text-sm text-slate-400 md:flex-row md:items-center md:justify-between">
           <p>© {{ currentYear }} {{ siteSettings.siteName }} Admin Panel</p>
           <p>Infrastructure, Innovation, Impact</p>
         </div>

@@ -8,6 +8,7 @@ import ServiceDetail from '../pages/services/ServiceDetail.vue';
 import AdminLogin from '../pages/admin/AdminLogin.vue';
 import AdminDashboard from '../pages/admin/Dashboard.vue';
 import AdminContent from '../pages/admin/Content.vue';
+import AdminInbox from '../pages/admin/Inbox.vue';
 import AdminServices from '../pages/admin/Services.vue';
 import AdminSettings from '../pages/admin/Settings.vue';
 import AdminLayout from '../layouts/AdminLayout.vue';
@@ -56,6 +57,12 @@ const adminRoutes = [
         name: 'AdminContent',
         component: AdminContent,
         meta: { title: 'Content Management' }
+      },
+      {
+        path: 'inbox',
+        name: 'AdminInbox',
+        component: AdminInbox,
+        meta: { title: 'Inbox' }
       },
       {
         path: 'services',

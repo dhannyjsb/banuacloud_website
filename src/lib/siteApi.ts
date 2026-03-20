@@ -218,6 +218,34 @@ export interface AdminContentPayload {
   marketingCtas: AdminMarketingCtaConfig[];
 }
 
+export interface ContactMessagePayload {
+  name: string;
+  email: string;
+  whatsapp: string;
+  company?: string;
+  message: string;
+}
+
+export interface InboxMessage {
+  id: string;
+  name: string;
+  email: string;
+  whatsapp: string;
+  company?: string | null;
+  message: string;
+  isRead: boolean;
+  submittedAt?: string | null;
+  readAt?: string | null;
+}
+
+export interface AdminInboxPayload {
+  stats: {
+    total: number;
+    unread: number;
+  };
+  messages: InboxMessage[];
+}
+
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
 
 export const defaultSiteSettings: SiteSettings = {
@@ -505,6 +533,16 @@ export async function fetchServiceDetailPageFromApi(slug: string): Promise<Servi
   );
 }
 
+export async function submitContactMessage(payload: ContactMessagePayload) {
+  return parseResponse<{ message: string }>(
+    await fetch(`${API_BASE_URL}/site/contact-messages`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    }),
+  );
+}
+
 export async function fetchAdminContent(token: string) {
   return parseResponse<AdminContentPayload>(
     await fetch(`${API_BASE_URL}/admin/content`, {
@@ -522,6 +560,23 @@ export async function updateAdminContent(
       method: 'PUT',
       headers: authHeaders(token),
       body: JSON.stringify(payload),
+    }),
+  );
+}
+
+export async function fetchAdminInbox(token: string) {
+  return parseResponse<AdminInboxPayload>(
+    await fetch(`${API_BASE_URL}/admin/inbox`, {
+      headers: authHeaders(token),
+    }),
+  );
+}
+
+export async function markAdminInboxMessageRead(token: string, messageId: string) {
+  return parseResponse<{ message: InboxMessage }>(
+    await fetch(`${API_BASE_URL}/admin/inbox/${messageId}/read`, {
+      method: 'PATCH',
+      headers: authHeaders(token),
     }),
   );
 }
