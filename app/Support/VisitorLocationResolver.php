@@ -41,15 +41,23 @@ class VisitorLocationResolver
             $location = $this->resolveFromWebService($ipAddress);
 
             if ($location !== null) {
-                return $location;
+                if (! $this->hasNetworkData($location)) {
+                    $location = array_merge($location, $this->resolveFromNetworkDatabases($ipAddress));
+                }
+
+                return array_merge($this->emptyLocation(), $location);
             }
         }
 
-        if ($this->hasDatabase()) {
-            return $this->resolveFromDatabase($ipAddress);
+        $location = $this->hasDatabase()
+            ? $this->resolveFromDatabase($ipAddress)
+            : $this->emptyLocation();
+
+        if (! $this->hasNetworkData($location)) {
+            $location = array_merge($location, $this->resolveFromNetworkDatabases($ipAddress));
         }
 
-        return $this->emptyLocation();
+        return array_merge($this->emptyLocation(), $location);
     }
 
     private function hasWebService(): bool
@@ -80,24 +88,46 @@ class VisitorLocationResolver
         );
 
         try {
-            $city = $client->city($ipAddress);
+            $insights = $client->insights($ipAddress);
 
             return [
-                'countryCode' => $city->country->isoCode,
-                'countryName' => $city->country->name,
-                'cityName' => $city->city->name,
+                'countryCode' => $insights->country->isoCode,
+                'countryName' => $insights->country->name,
+                'cityName' => $insights->city->name,
+                'ispName' => $this->nullableString($insights->traits->isp),
+                'organizationName' => $this->nullableString($insights->traits->organization),
+                'autonomousSystemNumber' => $insights->traits->autonomousSystemNumber,
+                'autonomousSystemOrganization' => $this->nullableString($insights->traits->autonomousSystemOrganization),
             ];
         } catch (Throwable) {
             try {
-                $country = $client->country($ipAddress);
+                $city = $client->city($ipAddress);
 
                 return [
-                    'countryCode' => $country->country->isoCode,
-                    'countryName' => $country->country->name,
-                    'cityName' => null,
+                    'countryCode' => $city->country->isoCode,
+                    'countryName' => $city->country->name,
+                    'cityName' => $city->city->name,
+                    'ispName' => $this->nullableString($city->traits->isp),
+                    'organizationName' => $this->nullableString($city->traits->organization),
+                    'autonomousSystemNumber' => $city->traits->autonomousSystemNumber,
+                    'autonomousSystemOrganization' => $this->nullableString($city->traits->autonomousSystemOrganization),
                 ];
             } catch (Throwable) {
-                return null;
+                try {
+                    $country = $client->country($ipAddress);
+
+                    return [
+                        'countryCode' => $country->country->isoCode,
+                        'countryName' => $country->country->name,
+                        'cityName' => null,
+                        'ispName' => $this->nullableString($country->traits->isp),
+                        'organizationName' => $this->nullableString($country->traits->organization),
+                        'autonomousSystemNumber' => $country->traits->autonomousSystemNumber,
+                        'autonomousSystemOrganization' => $this->nullableString($country->traits->autonomousSystemOrganization),
+                    ];
+                } catch (Throwable) {
+                    return null;
+                }
             }
         }
     }
@@ -113,6 +143,10 @@ class VisitorLocationResolver
                 'countryCode' => $city->country->isoCode,
                 'countryName' => $city->country->name,
                 'cityName' => $city->city->name,
+                'ispName' => $this->nullableString($city->traits->isp),
+                'organizationName' => $this->nullableString($city->traits->organization),
+                'autonomousSystemNumber' => $city->traits->autonomousSystemNumber,
+                'autonomousSystemOrganization' => $this->nullableString($city->traits->autonomousSystemOrganization),
             ];
         } catch (Throwable) {
             try {
@@ -122,10 +156,76 @@ class VisitorLocationResolver
                     'countryCode' => $country->country->isoCode,
                     'countryName' => $country->country->name,
                     'cityName' => null,
+                    'ispName' => $this->nullableString($country->traits->isp),
+                    'organizationName' => $this->nullableString($country->traits->organization),
+                    'autonomousSystemNumber' => $country->traits->autonomousSystemNumber,
+                    'autonomousSystemOrganization' => $this->nullableString($country->traits->autonomousSystemOrganization),
                 ];
             } catch (Throwable) {
                 return $this->emptyLocation();
             }
+        } finally {
+            $reader->close();
+        }
+    }
+
+    private function resolveFromNetworkDatabases(string $ipAddress): array
+    {
+        if ($this->hasIspDatabase()) {
+            $network = $this->resolveFromIspDatabase($ipAddress);
+
+            if ($network !== null) {
+                return $network;
+            }
+        }
+
+        if ($this->hasAsnDatabase()) {
+            $network = $this->resolveFromAsnDatabase($ipAddress);
+
+            if ($network !== null) {
+                return $network;
+            }
+        }
+
+        return $this->emptyNetwork();
+    }
+
+    private function resolveFromIspDatabase(string $ipAddress): ?array
+    {
+        $reader = new Reader($this->ispDatabasePath());
+
+        try {
+            $record = $reader->isp($ipAddress);
+
+            return [
+                'ispName' => $this->nullableString($record->isp),
+                'organizationName' => $this->nullableString($record->organization),
+                'autonomousSystemNumber' => $record->autonomousSystemNumber,
+                'autonomousSystemOrganization' => $this->nullableString($record->autonomousSystemOrganization),
+            ];
+        } catch (Throwable) {
+            return null;
+        } finally {
+            $reader->close();
+        }
+    }
+
+    private function resolveFromAsnDatabase(string $ipAddress): ?array
+    {
+        $reader = new Reader($this->asnDatabasePath());
+
+        try {
+            $record = $reader->asn($ipAddress);
+            $organization = $this->nullableString($record->autonomousSystemOrganization);
+
+            return [
+                'ispName' => $organization,
+                'organizationName' => null,
+                'autonomousSystemNumber' => $record->autonomousSystemNumber,
+                'autonomousSystemOrganization' => $organization,
+            ];
+        } catch (Throwable) {
+            return null;
         } finally {
             $reader->close();
         }
@@ -158,17 +258,66 @@ class VisitorLocationResolver
         return (string) config('services.maxmind.database_path', storage_path('app/maxmind/GeoLite2-City.mmdb'));
     }
 
+    private function hasIspDatabase(): bool
+    {
+        return class_exists(Reader::class) && is_file($this->ispDatabasePath());
+    }
+
+    private function ispDatabasePath(): string
+    {
+        return (string) config('services.maxmind.isp_database_path', storage_path('app/maxmind/GeoIP2-ISP.mmdb'));
+    }
+
+    private function hasAsnDatabase(): bool
+    {
+        return class_exists(Reader::class) && is_file($this->asnDatabasePath());
+    }
+
+    private function asnDatabasePath(): string
+    {
+        return (string) config('services.maxmind.asn_database_path', storage_path('app/maxmind/GeoLite2-ASN.mmdb'));
+    }
+
     private function isPublicIp(string $ipAddress): bool
     {
         return filter_var($ipAddress, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
     }
 
-    private function emptyLocation(): array
+    private function hasNetworkData(array $location): bool
+    {
+        return filled($location['ispName'] ?? null)
+            || filled($location['organizationName'] ?? null)
+            || ($location['autonomousSystemNumber'] ?? null) !== null
+            || filled($location['autonomousSystemOrganization'] ?? null);
+    }
+
+    private function nullableString(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $normalizedValue = trim($value);
+
+        return $normalizedValue === '' ? null : $normalizedValue;
+    }
+
+    private function emptyNetwork(): array
     {
         return [
+            'ispName' => null,
+            'organizationName' => null,
+            'autonomousSystemNumber' => null,
+            'autonomousSystemOrganization' => null,
+        ];
+    }
+
+    private function emptyLocation(): array
+    {
+        return array_merge([
             'countryCode' => null,
             'countryName' => null,
             'cityName' => null,
-        ];
+        ], $this->emptyNetwork());
     }
 }

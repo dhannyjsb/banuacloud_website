@@ -20,6 +20,10 @@ use Illuminate\Database\Eloquent\Model;
     'country_code',
     'country_name',
     'city_name',
+    'isp_name',
+    'organization_name',
+    'autonomous_system_number',
+    'autonomous_system_organization',
     'visited_at',
 ])]
 class VisitorVisit extends Model

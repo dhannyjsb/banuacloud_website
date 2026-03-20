@@ -53,6 +53,10 @@ class VisitorVisitController extends Controller
             'country_code' => $location['countryCode'],
             'country_name' => $location['countryName'],
             'city_name' => $location['cityName'],
+            'isp_name' => $location['ispName'],
+            'organization_name' => $location['organizationName'],
+            'autonomous_system_number' => $location['autonomousSystemNumber'],
+            'autonomous_system_organization' => $location['autonomousSystemOrganization'],
             'visited_at' => now(),
         ]);
 

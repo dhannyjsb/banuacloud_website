@@ -304,6 +304,10 @@ export interface RecentVisitEntry {
   countryCode?: string | null;
   countryName?: string | null;
   cityName?: string | null;
+  ispName?: string | null;
+  organizationName?: string | null;
+  autonomousSystemNumber?: number | null;
+  autonomousSystemOrganization?: string | null;
   location: string;
   visitedAt?: string | null;
 }
@@ -315,6 +319,10 @@ export interface MostVisitedIpEntry {
   browser?: string | null;
   countryName?: string | null;
   cityName?: string | null;
+  ispName?: string | null;
+  organizationName?: string | null;
+  autonomousSystemNumber?: number | null;
+  autonomousSystemOrganization?: string | null;
   firstVisitedAt?: string | null;
   lastVisitedAt?: string | null;
 }
@@ -333,6 +341,7 @@ export interface TrafficDashboardData {
   topSources: TrafficBreakdownItem[];
   topBrowsers: TrafficBreakdownItem[];
   topPages: TrafficBreakdownItem[];
+  topIsps: TrafficBreakdownItem[];
   topCountries: TrafficBreakdownItem[];
   topCities: TrafficBreakdownItem[];
   dailyTrend: TrafficTrendPoint[];

@@ -212,6 +212,10 @@ const selectedIpSummary = computed<MostVisitedIpEntry | null>(() => {
     browser: latestVisit.browser,
     countryName: latestVisit.countryName,
     cityName: latestVisit.cityName,
+    ispName: latestVisit.ispName,
+    organizationName: latestVisit.organizationName,
+    autonomousSystemNumber: latestVisit.autonomousSystemNumber,
+    autonomousSystemOrganization: latestVisit.autonomousSystemOrganization,
     firstVisitedAt: orderedVisits[0]?.visitedAt,
     lastVisitedAt: latestVisit.visitedAt,
   };
@@ -292,6 +296,42 @@ const selectIp = (ipAddress?: string | null) => {
 
 const displayValue = (value?: string | null) => {
   return value && value.trim() ? value : '-';
+};
+
+const formatAutonomousSystem = (autonomousSystemNumber?: number | null, autonomousSystemOrganization?: string | null) => {
+  const parts: string[] = [];
+
+  if (typeof autonomousSystemNumber === 'number') {
+    parts.push(`AS${autonomousSystemNumber}`);
+  }
+
+  if (autonomousSystemOrganization && autonomousSystemOrganization.trim()) {
+    parts.push(autonomousSystemOrganization.trim());
+  }
+
+  return parts.join(' · ');
+};
+
+const networkMeta = (
+  ispName?: string | null,
+  organizationName?: string | null,
+  autonomousSystemNumber?: number | null,
+  autonomousSystemOrganization?: string | null,
+) => {
+  const normalizedIspName = ispName?.trim().toLowerCase() || null;
+  const normalizedOrganizationName = organizationName?.trim() || null;
+
+  if (normalizedOrganizationName && normalizedOrganizationName.toLowerCase() !== normalizedIspName) {
+    return normalizedOrganizationName;
+  }
+
+  const autonomousSystem = formatAutonomousSystem(autonomousSystemNumber, autonomousSystemOrganization);
+
+  if (autonomousSystem && autonomousSystem.toLowerCase() !== normalizedIspName) {
+    return autonomousSystem;
+  }
+
+  return '-';
 };
 
 const formatDate = (value?: string | null) => {
@@ -457,6 +497,27 @@ const formatDate = (value?: string | null) => {
           </section>
 
           <section class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+            <h3 class="text-base font-semibold text-white">Penyedia Jaringan</h3>
+            <p class="mt-1 text-sm text-slate-400">ISP atau organisasi jaringan yang paling sering muncul dari IP publik pada periode terpilih.</p>
+
+            <div v-if="(traffic?.topIsps.length || 0) === 0" class="mt-6 text-sm text-slate-400">
+              Belum ada ISP yang berhasil diidentifikasi.
+            </div>
+
+            <div v-else class="mt-6 space-y-4">
+              <div v-for="item in traffic?.topIsps || []" :key="item.label" class="space-y-2">
+                <div class="flex items-center justify-between gap-4 text-sm">
+                  <span class="font-medium text-white">{{ item.label }}</span>
+                  <span class="text-slate-400">{{ item.count }}</span>
+                </div>
+                <div class="h-2 overflow-hidden rounded-full bg-white/5">
+                  <div class="h-full rounded-full bg-gradient-to-r from-cyan-500 to-emerald-400" :style="{ width: scaleWidth(item.count, breakdownMax(traffic?.topIsps)) }" />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
             <h3 class="text-base font-semibold text-white">Asal Pengunjung</h3>
             <p class="mt-1 text-sm text-slate-400">Negara teratas dan kota yang berhasil dikenali dari IP publik pada periode terpilih.</p>
 
@@ -507,6 +568,7 @@ const formatDate = (value?: string | null) => {
                   <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Total Visit</th>
                   <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Visitor Unik</th>
                   <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Browser</th>
+                  <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">ISP</th>
                   <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Negara</th>
                   <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Last Seen</th>
                 </tr>
@@ -525,6 +587,10 @@ const formatDate = (value?: string | null) => {
                   <td class="px-5 py-4 align-top text-sm text-slate-300">{{ entry.totalVisits }}</td>
                   <td class="px-5 py-4 align-top text-sm text-slate-300">{{ entry.uniqueVisitors }}</td>
                   <td class="px-5 py-4 align-top text-sm text-slate-300">{{ displayValue(entry.browser) }}</td>
+                  <td class="px-5 py-4 align-top">
+                    <p class="text-sm text-slate-300">{{ displayValue(entry.ispName) }}</p>
+                    <p class="mt-1 text-xs text-slate-500">{{ networkMeta(entry.ispName, entry.organizationName, entry.autonomousSystemNumber, entry.autonomousSystemOrganization) }}</p>
+                  </td>
                   <td class="px-5 py-4 align-top">
                     <p class="text-sm text-slate-300">{{ displayValue(entry.countryName) }}</p>
                     <p class="mt-1 text-xs text-slate-500">{{ displayValue(entry.cityName) }}</p>
@@ -562,6 +628,11 @@ const formatDate = (value?: string | null) => {
                 <p class="mt-3 text-sm text-white">{{ displayValue(selectedIpSummary.browser) }}</p>
               </div>
               <div class="rounded-xl border border-white/10 bg-white/5 p-4">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Penyedia Jaringan</p>
+                <p class="mt-3 text-sm text-white">{{ displayValue(selectedIpSummary.ispName) }}</p>
+                <p class="mt-1 text-xs text-slate-500">{{ networkMeta(selectedIpSummary.ispName, selectedIpSummary.organizationName, selectedIpSummary.autonomousSystemNumber, selectedIpSummary.autonomousSystemOrganization) }}</p>
+              </div>
+              <div class="rounded-xl border border-white/10 bg-white/5 p-4">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Source Dominan</p>
                 <p class="mt-3 text-sm text-white">{{ selectedIpDominantSource.label }}</p>
                 <p class="mt-1 text-xs text-slate-500">{{ selectedIpDominantSource.count }} visit</p>
@@ -587,6 +658,8 @@ const formatDate = (value?: string | null) => {
                 <span class="font-semibold text-white">{{ selectedIpSummary.uniqueVisitors }} visitor unik</span>.
                 Browser yang paling terlihat adalah
                 <span class="font-semibold text-white">{{ displayValue(selectedIpSummary.browser) }}</span>
+                dengan provider
+                <span class="font-semibold text-white">{{ displayValue(selectedIpSummary.ispName) }}</span>
                 dan source dominannya
                 <span class="font-semibold text-white">{{ selectedIpDominantSource.label }}</span>.
               </p>
@@ -619,6 +692,7 @@ const formatDate = (value?: string | null) => {
                 <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">IP</th>
                 <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Sumber</th>
                 <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Browser</th>
+                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">ISP</th>
                 <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Waktu</th>
               </tr>
             </thead>
@@ -639,6 +713,10 @@ const formatDate = (value?: string | null) => {
                   </span>
                 </td>
                 <td class="px-5 py-4 align-top text-sm text-slate-300">{{ displayValue(visit.browser) }}</td>
+                <td class="px-5 py-4 align-top">
+                  <p class="text-sm text-slate-300">{{ displayValue(visit.ispName) }}</p>
+                  <p class="mt-1 text-xs text-slate-500">{{ networkMeta(visit.ispName, visit.organizationName, visit.autonomousSystemNumber, visit.autonomousSystemOrganization) }}</p>
+                </td>
                 <td class="px-5 py-4 align-top text-sm text-slate-400">{{ formatDate(visit.visitedAt) }}</td>
               </tr>
             </tbody>

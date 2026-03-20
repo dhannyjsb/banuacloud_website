@@ -9,6 +9,7 @@ use App\Models\FaqItem;
 use App\Models\Service;
 use App\Models\Testimonial;
 use App\Models\User;
+use App\Models\VisitorVisit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -177,6 +178,28 @@ class ContactMessageSubmissionTest extends TestCase
             'metadata' => [],
         ]);
 
+        VisitorVisit::query()->create([
+            'visitor_token' => 'visitor-token-1',
+            'path' => '/',
+            'route_name' => 'home',
+            'page_title' => 'Home',
+            'referrer_url' => null,
+            'referrer_host' => null,
+            'source' => 'Direct',
+            'medium' => null,
+            'utm_campaign' => null,
+            'ip_address' => '8.8.8.8',
+            'user_agent' => 'Mozilla/5.0',
+            'country_code' => 'ID',
+            'country_name' => 'Indonesia',
+            'city_name' => 'Banjarmasin',
+            'isp_name' => 'Biznet',
+            'organization_name' => 'Biznet Networks',
+            'autonomous_system_number' => 17451,
+            'autonomous_system_organization' => 'PT. Supra Primatama Nusantara',
+            'visited_at' => now(),
+        ]);
+
         Sanctum::actingAs($admin);
 
         $response = $this->getJson('/api/admin/dashboard');
@@ -188,6 +211,9 @@ class ContactMessageSubmissionTest extends TestCase
             ->assertJsonPath('stats.testimonials', 1)
             ->assertJsonPath('stats.faqs', 1)
             ->assertJsonPath('stats.caseStudies', 1)
+            ->assertJsonPath('traffic.topIsps.0.label', 'Biznet')
+            ->assertJsonPath('traffic.mostVisitedIps.0.ispName', 'Biznet')
+            ->assertJsonPath('traffic.recentVisits.0.organizationName', 'Biznet Networks')
             ->assertJsonCount(1, 'recentAuditLogs');
     }
 }

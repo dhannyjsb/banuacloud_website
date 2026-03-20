@@ -35,7 +35,7 @@ class DashboardController extends Controller
             ->where('visited_at', '>=', now()->startOfDay());
 
         $workflow = collect(ContactMessage::WORKFLOW_STATUSES)
-            ->map(fn(string $status): array => [
+            ->map(fn (string $status): array => [
                 'key' => $status,
                 'count' => $messages->where('status', $status)->count(),
             ])
@@ -43,7 +43,7 @@ class DashboardController extends Controller
             ->all();
 
         $categories = collect(ContactMessage::CATEGORY_OPTIONS)
-            ->map(fn(string $category): array => [
+            ->map(fn (string $category): array => [
                 'key' => $category,
                 'count' => $messages->where('category', $category)->count(),
             ])
@@ -87,6 +87,7 @@ class DashboardController extends Controller
                 'topSources' => $this->topTrafficItems($trafficQuery, 'source', 'Direct'),
                 'topBrowsers' => $this->topBrowsers($trafficQuery),
                 'topPages' => $this->topTrafficItems($trafficQuery, 'path', '/'),
+                'topIsps' => $this->topKnownTrafficItems($trafficQuery, 'isp_name'),
                 'topCountries' => $this->topTrafficItems($trafficQuery, 'country_name', 'Tidak diketahui'),
                 'topCities' => $this->topCities($trafficQuery),
                 'dailyTrend' => $this->dailyTrend($trafficRange['start'], $trafficRange['end']),
@@ -95,7 +96,7 @@ class DashboardController extends Controller
                     ->latest('visited_at')
                     ->limit(8)
                     ->get()
-                    ->map(fn(VisitorVisit $visit): array => [
+                    ->map(fn (VisitorVisit $visit): array => [
                         'id' => (string) $visit->id,
                         'visitorToken' => $visit->visitor_token,
                         'path' => $visit->path,
@@ -112,6 +113,10 @@ class DashboardController extends Controller
                         'countryCode' => $visit->country_code,
                         'countryName' => $visit->country_name,
                         'cityName' => $visit->city_name,
+                        'ispName' => $visit->isp_name,
+                        'organizationName' => $visit->organization_name,
+                        'autonomousSystemNumber' => $visit->autonomous_system_number,
+                        'autonomousSystemOrganization' => $visit->autonomous_system_organization,
                         'location' => collect([$visit->city_name, $visit->country_name])
                             ->filter()
                             ->implode(', ') ?: 'Tidak diketahui',
@@ -124,7 +129,7 @@ class DashboardController extends Controller
             'categories' => $categories,
             'recentMessages' => $messages
                 ->take(6)
-                ->map(fn(ContactMessage $message): array => [
+                ->map(fn (ContactMessage $message): array => [
                     'id' => (string) $message->id,
                     'name' => $message->name,
                     'company' => $message->company,
@@ -139,7 +144,7 @@ class DashboardController extends Controller
                 ->latest()
                 ->limit(8)
                 ->get()
-                ->map(fn(AuditLog $log): array => [
+                ->map(fn (AuditLog $log): array => [
                     'id' => (string) $log->id,
                     'actorName' => $log->actor_name,
                     'actorEmail' => $log->actor_email,
@@ -156,12 +161,12 @@ class DashboardController extends Controller
     private function topTrafficItems(Builder $query, string $column, string $fallbackLabel, int $limit = 5): array
     {
         return (clone $query)
-            ->selectRaw($column . ' as label, COUNT(*) as aggregate')
+            ->selectRaw($column.' as label, COUNT(*) as aggregate')
             ->groupBy($column)
             ->orderByDesc('aggregate')
             ->limit($limit)
             ->get()
-            ->map(fn(object $row): array => [
+            ->map(fn (object $row): array => [
                 'label' => filled($row->label) ? (string) $row->label : $fallbackLabel,
                 'count' => (int) $row->aggregate,
             ])
@@ -178,8 +183,26 @@ class DashboardController extends Controller
             ->orderByDesc('aggregate')
             ->limit($limit)
             ->get()
-            ->map(fn(object $row): array => [
+            ->map(fn (object $row): array => [
                 'label' => collect([$row->city_name, $row->country_name])->filter()->implode(', '),
+                'count' => (int) $row->aggregate,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function topKnownTrafficItems(Builder $query, string $column, int $limit = 5): array
+    {
+        return (clone $query)
+            ->whereNotNull($column)
+            ->where($column, '!=', '')
+            ->selectRaw($column.' as label, COUNT(*) as aggregate')
+            ->groupBy($column)
+            ->orderByDesc('aggregate')
+            ->limit($limit)
+            ->get()
+            ->map(fn (object $row): array => [
+                'label' => (string) $row->label,
                 'count' => (int) $row->aggregate,
             ])
             ->values()
@@ -245,6 +268,10 @@ class DashboardController extends Controller
                     'browser' => $this->detectBrowser($latestVisit?->user_agent),
                     'countryName' => $latestVisit?->country_name,
                     'cityName' => $latestVisit?->city_name,
+                    'ispName' => $latestVisit?->isp_name,
+                    'organizationName' => $latestVisit?->organization_name,
+                    'autonomousSystemNumber' => $latestVisit?->autonomous_system_number,
+                    'autonomousSystemOrganization' => $latestVisit?->autonomous_system_organization,
                     'firstVisitedAt' => $row->first_visited_at ? Carbon::parse($row->first_visited_at)->toIso8601String() : null,
                     'lastVisitedAt' => $latestVisit?->visited_at?->toIso8601String(),
                 ];
@@ -273,7 +300,7 @@ class DashboardController extends Controller
             }, []);
 
         return collect($browserCounts)
-            ->map(fn(int $count, string $label): array => [
+            ->map(fn (int $count, string $label): array => [
                 'label' => $label,
                 'count' => $count,
             ])

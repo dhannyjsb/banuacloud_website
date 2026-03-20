@@ -42,6 +42,11 @@ return [
         'timeout' => env('MAXMIND_TIMEOUT', 3),
         'connect_timeout' => env('MAXMIND_CONNECT_TIMEOUT', 2),
         'database_path' => env('MAXMIND_DATABASE_PATH', storage_path('app/maxmind/GeoLite2-City.mmdb')),
+        'isp_database_path' => env('MAXMIND_ISP_DATABASE_PATH', storage_path('app/maxmind/GeoIP2-ISP.mmdb')),
+        'asn_database_path' => env('MAXMIND_ASN_DATABASE_PATH', storage_path('app/maxmind/GeoLite2-ASN.mmdb')),
+        'auto_download' => env('MAXMIND_AUTO_DOWNLOAD', true),
+        'auto_download_include_isp' => env('MAXMIND_AUTO_DOWNLOAD_INCLUDE_ISP', false),
+        'auto_update_enabled' => env('MAXMIND_AUTO_UPDATE_ENABLED', true),
     ],
 
 ];
