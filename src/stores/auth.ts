@@ -99,6 +99,11 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('admin_user', JSON.stringify(authResponse.user));
   };
 
+  const updateAuthenticatedUser = (nextUser: User) => {
+    user.value = nextUser;
+    localStorage.setItem('admin_user', JSON.stringify(nextUser));
+  };
+
   // Initialize from localStorage on store creation
   const initAuth = () => {
     try {
@@ -276,6 +281,7 @@ export const useAuthStore = defineStore('auth', () => {
     hasPermission,
     initAuth,
     ensureAuthState,
-    validateToken
+    validateToken,
+    updateAuthenticatedUser,
   };
 });

@@ -11,6 +11,7 @@ use App\Models\Testimonial;
 use App\Models\User;
 use App\Models\VisitorVisit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -215,5 +216,63 @@ class ContactMessageSubmissionTest extends TestCase
             ->assertJsonPath('traffic.mostVisitedIps.0.ispName', 'Biznet')
             ->assertJsonPath('traffic.recentVisits.0.organizationName', 'Biznet Networks')
             ->assertJsonCount(1, 'recentAuditLogs');
+    }
+
+    public function test_admin_can_update_account_details(): void
+    {
+        $admin = User::factory()->create([
+            'name' => 'Admin Lama',
+            'email' => 'admin-lama@example.com',
+            'password' => 'password-sebelumnya',
+            'role' => 'admin',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $response = $this->putJson('/api/auth/account', [
+            'name' => 'Admin Baru',
+            'email' => 'admin-baru@example.com',
+            'currentPassword' => 'password-sebelumnya',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('message', 'Admin account updated successfully.')
+            ->assertJsonPath('user.name', 'Admin Baru')
+            ->assertJsonPath('user.email', 'admin-baru@example.com');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $admin->id,
+            'name' => 'Admin Baru',
+            'email' => 'admin-baru@example.com',
+        ]);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'user_id' => $admin->id,
+            'target' => 'account',
+            'action' => 'updated',
+        ]);
+    }
+
+    public function test_admin_account_update_requires_current_password(): void
+    {
+        $admin = User::factory()->create([
+            'password' => 'password-sebelumnya',
+            'role' => 'admin',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $response = $this->putJson('/api/auth/account', [
+            'name' => 'Nama Baru',
+            'email' => 'nama.baru@example.com',
+            'currentPassword' => 'password-salah',
+        ]);
+
+        $response
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Current password is incorrect.');
+
+        $this->assertTrue(Hash::check('password-sebelumnya', $admin->fresh()->password));
     }
 }

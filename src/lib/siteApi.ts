@@ -25,6 +25,19 @@ export interface ChangePasswordPayload {
   newPasswordConfirmation: string;
 }
 
+export interface AdminAccountPayload {
+  name: string;
+  email: string;
+  currentPassword: string;
+}
+
+export interface AuthenticatedAdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'editor';
+}
+
 export interface HeroContent {
   title: string;
   subtitle: string;
@@ -921,6 +934,16 @@ export async function updateAdminPassword(token: string, payload: ChangePassword
         newPassword: payload.newPassword,
         newPassword_confirmation: payload.newPasswordConfirmation,
       }),
+    }),
+  );
+}
+
+export async function updateAdminAccount(token: string, payload: AdminAccountPayload) {
+  return parseResponse<{ message: string; user: AuthenticatedAdminUser }>(
+    await fetch(`${API_BASE_URL}/auth/account`, {
+      method: 'PUT',
+      headers: authHeaders(token),
+      body: JSON.stringify(payload),
     }),
   );
 }

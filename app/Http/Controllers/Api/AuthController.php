@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\AdminAuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthController extends Controller
@@ -79,8 +81,59 @@ class AuthController extends Controller
             'password' => $data['newPassword'],
         ])->save();
 
+        AdminAuditLogger::record(
+            $user,
+            'account',
+            'password_changed',
+            'Updated admin account password.',
+        );
+
         return response()->json([
             'message' => 'Password updated successfully.',
+        ]);
+    }
+
+    public function updateAccount(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'currentPassword' => ['required', 'string'],
+        ]);
+
+        if (! Hash::check($data['currentPassword'], $user->password)) {
+            return response()->json([
+                'message' => 'Current password is incorrect.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $originalName = $user->name;
+        $originalEmail = $user->email;
+
+        $user->forceFill([
+            'name' => $data['name'],
+            'email' => $data['email'],
+        ])->save();
+
+        AdminAuditLogger::record(
+            $user,
+            'account',
+            'updated',
+            'Updated admin account details.',
+            [
+                'previous_name' => $originalName,
+                'previous_email' => $originalEmail,
+                'current_name' => $user->name,
+                'current_email' => $user->email,
+            ],
+        );
+
+        return response()->json([
+            'message' => 'Admin account updated successfully.',
+            'user' => $this->formatUser($user->fresh()),
         ]);
     }
 

@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import { Save, Shield, Globe, Mail, Phone, MapPin, Bell, Lock, Upload, Loader2 } from 'lucide-vue-next';
 import { emitSiteSettingsUpdated } from '../../composables/useSiteSettings';
 import {
+  updateAdminAccount,
   defaultSiteSettings,
   fetchAdminSettings,
   updateAdminPassword,
@@ -23,7 +24,10 @@ const logoErrorMessage = ref('');
 const logoSuccessMessage = ref('');
 const passwordErrorMessage = ref('');
 const passwordSuccessMessage = ref('');
+const accountErrorMessage = ref('');
+const accountSuccessMessage = ref('');
 const isUpdatingPassword = ref(false);
+const isUpdatingAccount = ref(false);
 const isUploadingLogo = ref(false);
 const authStore = useAuthStore();
 const logoInputRef = ref<HTMLInputElement | null>(null);
@@ -35,6 +39,11 @@ const passwordForm = reactive({
   currentPassword: '',
   newPassword: '',
   newPasswordConfirmation: '',
+});
+const accountForm = reactive({
+  name: '',
+  email: '',
+  currentPassword: '',
 });
 
 const tabs = [
@@ -58,6 +67,8 @@ const loadSettings = async () => {
 
     const payload = await fetchAdminSettings(authStore.token);
     Object.assign(settings, payload.settings);
+    accountForm.name = authStore.user?.name ?? '';
+    accountForm.email = authStore.user?.email ?? '';
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Failed to load settings.';
   } finally {
@@ -120,6 +131,12 @@ const resetPasswordForm = () => {
   passwordForm.currentPassword = '';
   passwordForm.newPassword = '';
   passwordForm.newPasswordConfirmation = '';
+};
+
+const resetAccountForm = () => {
+  accountForm.name = authStore.user?.name ?? '';
+  accountForm.email = authStore.user?.email ?? '';
+  accountForm.currentPassword = '';
 };
 
 const currentLogoPreview = computed(() => selectedLogoPreview.value || settings.logoUrl);
@@ -224,6 +241,47 @@ const handleChangePassword = async () => {
     isUpdatingPassword.value = false;
   }
 };
+
+const handleChangeAccount = async () => {
+  isUpdatingAccount.value = true;
+  accountErrorMessage.value = '';
+  accountSuccessMessage.value = '';
+
+  try {
+    await authStore.ensureAuthState();
+
+    if (!authStore.token) {
+      throw new Error('Admin session not found. Please sign in again.');
+    }
+
+    const payload = await updateAdminAccount(authStore.token, {
+      name: accountForm.name,
+      email: accountForm.email,
+      currentPassword: accountForm.currentPassword,
+    });
+
+    authStore.updateAuthenticatedUser(payload.user);
+    accountSuccessMessage.value = payload.message;
+    accountForm.currentPassword = '';
+  } catch (error) {
+    accountErrorMessage.value = error instanceof Error ? error.message : 'Failed to update admin account.';
+  } finally {
+    isUpdatingAccount.value = false;
+  }
+};
+
+watch(
+  () => authStore.user,
+  (user) => {
+    if (!user) {
+      return;
+    }
+
+    accountForm.name = user.name;
+    accountForm.email = user.email;
+  },
+  { immediate: true },
+);
 
 onUnmounted(() => {
   clearLogoSelection();
@@ -569,6 +627,84 @@ onUnmounted(() => {
         <!-- Security -->
         <div v-if="activeTab === 'security'" class="glass-md p-6 rounded-xl border border-white/10 space-y-6">
           <h3 class="text-lg font-semibold text-white">Security Settings</h3>
+
+          <div class="rounded-xl border border-white/10 bg-white/5 p-5 space-y-4">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h4 class="text-base font-semibold text-white">Admin Account</h4>
+                <p class="mt-1 text-sm text-slate-400">Update the admin display name and login email. Confirm with your current password.</p>
+              </div>
+              <p class="rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300">
+                {{ authStore.user?.role === 'editor' ? 'Editor Account' : 'Administrator Account' }}
+              </p>
+            </div>
+
+            <div
+              v-if="accountSuccessMessage"
+              class="rounded-lg border border-green-500/20 bg-green-500/10 px-4 py-3 text-sm text-green-400"
+            >
+              {{ accountSuccessMessage }}
+            </div>
+
+            <div
+              v-if="accountErrorMessage"
+              class="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400"
+            >
+              {{ accountErrorMessage }}
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-slate-300">Admin Name</label>
+                <input
+                  v-model="accountForm.name"
+                  type="text"
+                  autocomplete="name"
+                  class="w-full rounded-lg border border-white/10 bg-[#0b1120] px-4 py-3 text-white focus:border-sky-500 focus:outline-none"
+                />
+              </div>
+
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-slate-300">Admin Email</label>
+                <input
+                  v-model="accountForm.email"
+                  type="email"
+                  autocomplete="email"
+                  class="w-full rounded-lg border border-white/10 bg-[#0b1120] px-4 py-3 text-white focus:border-sky-500 focus:outline-none"
+                />
+              </div>
+
+              <div class="space-y-2 md:col-span-2">
+                <label class="text-sm font-medium text-slate-300">Current Password</label>
+                <input
+                  v-model="accountForm.currentPassword"
+                  type="password"
+                  autocomplete="current-password"
+                  class="w-full rounded-lg border border-white/10 bg-[#0b1120] px-4 py-3 text-white focus:border-sky-500 focus:outline-none"
+                />
+                <p class="text-xs text-slate-500">Required to confirm account changes.</p>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                class="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition-colors hover:bg-white/10"
+                @click="resetAccountForm"
+              >
+                Reset Account Form
+              </button>
+              <button
+                type="button"
+                :disabled="isUpdatingAccount"
+                class="inline-flex items-center justify-center gap-2 rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-sky-600 disabled:opacity-50"
+                @click="handleChangeAccount"
+              >
+                <Shield class="h-4 w-4" />
+                {{ isUpdatingAccount ? 'Updating Account...' : 'Update Admin Account' }}
+              </button>
+            </div>
+          </div>
 
           <div class="flex items-center justify-between p-4 rounded-lg bg-white/5">
             <div>
