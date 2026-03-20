@@ -14,16 +14,22 @@ use App\Models\VisitorVisit;
 use App\Support\VisitorLocationResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class DashboardController extends Controller
 {
     public function __construct(private VisitorLocationResolver $visitorLocationResolver) {}
 
-    public function show(): JsonResponse
+    public function show(Request $request): JsonResponse
     {
         $messages = ContactMessage::query()
             ->orderByDesc('created_at')
             ->get();
+
+        $trafficRange = $this->resolveTrafficRange($request);
+        $trafficQuery = VisitorVisit::query()
+            ->whereBetween('visited_at', [$trafficRange['start'], $trafficRange['end']]);
 
         $todayTrafficQuery = VisitorVisit::query()
             ->where('visited_at', '>=', now()->startOfDay());
@@ -65,17 +71,27 @@ class DashboardController extends Controller
                 'todayPageViews' => $todayPageViews,
             ],
             'traffic' => [
-                'todayVisitors' => $todayVisitors,
-                'todayPageViews' => $todayPageViews,
+                'period' => $trafficRange['period'],
+                'rangeStart' => $trafficRange['start']->toDateString(),
+                'rangeEnd' => $trafficRange['end']->toDateString(),
+                'rangeLabel' => $trafficRange['rangeLabel'],
+                'summaryLabel' => $trafficRange['summaryLabel'],
+                'rangeDescription' => $trafficRange['rangeDescription'],
+                'todayVisitors' => (clone $trafficQuery)
+                    ->select('visitor_token')
+                    ->distinct()
+                    ->count('visitor_token'),
+                'todayPageViews' => (clone $trafficQuery)->count(),
                 'geolocationEnabled' => $this->visitorLocationResolver->isEnabled(),
                 'geolocationMode' => $this->visitorLocationResolver->lookupMode(),
-                'topSources' => $this->topTrafficItems($todayTrafficQuery, 'source', 'Direct'),
-                'topPages' => $this->topTrafficItems($todayTrafficQuery, 'path', '/'),
-                'topCountries' => $this->topTrafficItems($todayTrafficQuery, 'country_name', 'Tidak diketahui'),
-                'topCities' => $this->topCities($todayTrafficQuery),
-                'dailyTrend' => $this->dailyTrend(),
-                'mostVisitedIps' => $this->mostVisitedIps(),
-                'recentVisits' => VisitorVisit::query()
+                'topSources' => $this->topTrafficItems($trafficQuery, 'source', 'Direct'),
+                'topBrowsers' => $this->topBrowsers($trafficQuery),
+                'topPages' => $this->topTrafficItems($trafficQuery, 'path', '/'),
+                'topCountries' => $this->topTrafficItems($trafficQuery, 'country_name', 'Tidak diketahui'),
+                'topCities' => $this->topCities($trafficQuery),
+                'dailyTrend' => $this->dailyTrend($trafficRange['start'], $trafficRange['end']),
+                'mostVisitedIps' => $this->mostVisitedIps($trafficQuery),
+                'recentVisits' => (clone $trafficQuery)
                     ->latest('visited_at')
                     ->limit(8)
                     ->get()
@@ -170,45 +186,47 @@ class DashboardController extends Controller
             ->all();
     }
 
-    private function dailyTrend(): array
+    private function dailyTrend(Carbon $start, Carbon $end): array
     {
         $trendRows = VisitorVisit::query()
-            ->where('visited_at', '>=', now()->subDays(6)->startOfDay())
+            ->whereBetween('visited_at', [$start, $end])
             ->selectRaw('DATE(visited_at) as visit_date, COUNT(*) as page_views, COUNT(DISTINCT visitor_token) as visitors')
             ->groupBy('visit_date')
             ->orderBy('visit_date')
             ->get()
             ->keyBy('visit_date');
 
-        return collect(range(6, 0))
-            ->map(function (int $daysAgo) use ($trendRows): array {
-                $date = now()->subDays($daysAgo);
-                $key = $date->toDateString();
-                $row = $trendRows->get($key);
+        $dayCount = $start->diffInDays($end);
+        $trend = [];
 
-                return [
-                    'date' => $key,
-                    'label' => $date->translatedFormat('d M'),
-                    'pageViews' => (int) ($row->page_views ?? 0),
-                    'visitors' => (int) ($row->visitors ?? 0),
-                ];
-            })
-            ->values()
-            ->all();
+        for ($offset = 0; $offset <= $dayCount; $offset++) {
+            $date = $start->copy()->addDays($offset);
+            $key = $date->toDateString();
+            $row = $trendRows->get($key);
+
+            $trend[] = [
+                'date' => $key,
+                'label' => $date->translatedFormat('d M'),
+                'pageViews' => (int) ($row->page_views ?? 0),
+                'visitors' => (int) ($row->visitors ?? 0),
+            ];
+        }
+
+        return $trend;
     }
 
-    private function mostVisitedIps(int $limit = 10): array
+    private function mostVisitedIps(Builder $query, int $limit = 10): array
     {
-        $rows = VisitorVisit::query()
+        $rows = (clone $query)
             ->whereNotNull('ip_address')
             ->where('ip_address', '!=', '')
-            ->selectRaw('ip_address, COUNT(*) as aggregate, COUNT(DISTINCT visitor_token) as unique_visitors, MAX(visited_at) as last_visited_at')
+            ->selectRaw('ip_address, COUNT(*) as aggregate, COUNT(DISTINCT visitor_token) as unique_visitors, MIN(visited_at) as first_visited_at, MAX(visited_at) as last_visited_at')
             ->groupBy('ip_address')
             ->orderByDesc('aggregate')
             ->limit($limit)
             ->get();
 
-        $latestVisitsByIp = VisitorVisit::query()
+        $latestVisitsByIp = (clone $query)
             ->whereIn('ip_address', $rows->pluck('ip_address')->all())
             ->orderByDesc('visited_at')
             ->get()
@@ -227,11 +245,112 @@ class DashboardController extends Controller
                     'browser' => $this->detectBrowser($latestVisit?->user_agent),
                     'countryName' => $latestVisit?->country_name,
                     'cityName' => $latestVisit?->city_name,
+                    'firstVisitedAt' => $row->first_visited_at ? Carbon::parse($row->first_visited_at)->toIso8601String() : null,
                     'lastVisitedAt' => $latestVisit?->visited_at?->toIso8601String(),
                 ];
             })
             ->values()
             ->all();
+    }
+
+    private function topBrowsers(Builder $query, int $limit = 5): array
+    {
+        $browserCounts = (clone $query)
+            ->selectRaw('user_agent, COUNT(*) as aggregate')
+            ->groupBy('user_agent')
+            ->orderByDesc('aggregate')
+            ->get()
+            ->reduce(function (array $carry, object $row): array {
+                $label = $this->detectBrowser($row->user_agent ?? null);
+
+                if (! array_key_exists($label, $carry)) {
+                    $carry[$label] = 0;
+                }
+
+                $carry[$label] += (int) $row->aggregate;
+
+                return $carry;
+            }, []);
+
+        return collect($browserCounts)
+            ->map(fn(int $count, string $label): array => [
+                'label' => $label,
+                'count' => $count,
+            ])
+            ->sortByDesc('count')
+            ->take($limit)
+            ->values()
+            ->all();
+    }
+
+    private function resolveTrafficRange(Request $request): array
+    {
+        $period = $request->string('period')->toString();
+        $now = now();
+
+        return match ($period) {
+            '7d' => [
+                'period' => '7d',
+                'start' => $now->copy()->subDays(6)->startOfDay(),
+                'end' => $now->copy()->endOfDay(),
+                'rangeLabel' => '7 Hari Terakhir',
+                'summaryLabel' => '7 Hari',
+                'rangeDescription' => '7 hari terakhir',
+            ],
+            '30d' => [
+                'period' => '30d',
+                'start' => $now->copy()->subDays(29)->startOfDay(),
+                'end' => $now->copy()->endOfDay(),
+                'rangeLabel' => '30 Hari Terakhir',
+                'summaryLabel' => '30 Hari',
+                'rangeDescription' => '30 hari terakhir',
+            ],
+            'custom' => $this->resolveCustomTrafficRange($request, $now),
+            default => [
+                'period' => 'today',
+                'start' => $now->copy()->startOfDay(),
+                'end' => $now->copy()->endOfDay(),
+                'rangeLabel' => 'Hari Ini',
+                'summaryLabel' => 'Hari Ini',
+                'rangeDescription' => 'hari ini',
+            ],
+        };
+    }
+
+    private function resolveCustomTrafficRange(Request $request, Carbon $fallbackDate): array
+    {
+        $start = $this->parseDateInput($request->string('startDate')->toString()) ?? $fallbackDate->copy()->startOfDay();
+        $end = $this->parseDateInput($request->string('endDate')->toString()) ?? $start->copy();
+
+        if ($start->gt($end)) {
+            [$start, $end] = [$end, $start];
+        }
+
+        if ($start->diffInDays($end) > 30) {
+            $end = $start->copy()->addDays(30);
+        }
+
+        return [
+            'period' => 'custom',
+            'start' => $start->copy()->startOfDay(),
+            'end' => $end->copy()->endOfDay(),
+            'rangeLabel' => sprintf('%s - %s', $start->translatedFormat('d M Y'), $end->translatedFormat('d M Y')),
+            'summaryLabel' => 'Custom',
+            'rangeDescription' => 'rentang tanggal pilihan',
+        ];
+    }
+
+    private function parseDateInput(?string $value): ?Carbon
+    {
+        if (blank($value)) {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('Y-m-d', (string) $value);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function detectBrowser(?string $userAgent): string

@@ -285,6 +285,8 @@ export interface TrafficTrendPoint {
   visitors: number;
 }
 
+export type TrafficPeriod = 'today' | '7d' | '30d' | 'custom';
+
 export interface RecentVisitEntry {
   id: string;
   visitorToken?: string | null;
@@ -313,15 +315,23 @@ export interface MostVisitedIpEntry {
   browser?: string | null;
   countryName?: string | null;
   cityName?: string | null;
+  firstVisitedAt?: string | null;
   lastVisitedAt?: string | null;
 }
 
 export interface TrafficDashboardData {
+  period: TrafficPeriod;
+  rangeStart: string;
+  rangeEnd: string;
+  rangeLabel: string;
+  summaryLabel: string;
+  rangeDescription: string;
   todayVisitors: number;
   todayPageViews: number;
   geolocationEnabled: boolean;
   geolocationMode: 'web_service' | 'database' | 'disabled';
   topSources: TrafficBreakdownItem[];
+  topBrowsers: TrafficBreakdownItem[];
   topPages: TrafficBreakdownItem[];
   topCountries: TrafficBreakdownItem[];
   topCities: TrafficBreakdownItem[];
@@ -356,6 +366,12 @@ export interface AdminDashboardPayload {
     submittedAt?: string | null;
   }>;
   recentAuditLogs: AuditLogEntry[];
+}
+
+export interface AdminDashboardFilters {
+  period?: TrafficPeriod;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface AuditLogEntry {
@@ -802,9 +818,25 @@ export async function updateAdminInboxWorkflow(token: string, messageId: string,
   );
 }
 
-export async function fetchAdminDashboard(token: string) {
+export async function fetchAdminDashboard(token: string, filters: AdminDashboardFilters = {}) {
+  const params = new URLSearchParams();
+
+  if (filters.period) {
+    params.set('period', filters.period);
+  }
+
+  if (filters.startDate) {
+    params.set('startDate', filters.startDate);
+  }
+
+  if (filters.endDate) {
+    params.set('endDate', filters.endDate);
+  }
+
+  const query = params.toString();
+
   return parseResponse<AdminDashboardPayload>(
-    await fetch(`${API_BASE_URL}/admin/dashboard`, {
+    await fetch(`${API_BASE_URL}/admin/dashboard${query ? `?${query}` : ''}`, {
       headers: authHeaders(token),
     }),
   );

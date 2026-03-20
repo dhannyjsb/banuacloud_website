@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { Activity, Globe2, MapPinned, Users } from 'lucide-vue-next';
-import type { RecentVisitEntry, TrafficBreakdownItem, TrafficDashboardData } from '../../lib/siteApi';
+import type { MostVisitedIpEntry, RecentVisitEntry, TrafficBreakdownItem, TrafficDashboardData } from '../../lib/siteApi';
 
 type TrendMetric = 'pageViews' | 'visitors';
 
@@ -9,15 +9,23 @@ const props = withDefaults(defineProps<{
   traffic?: TrafficDashboardData | null;
   isLoading?: boolean;
   detailRoute?: string | null;
+  summaryLabel?: string;
+  rangeDescription?: string;
+  trendTitle?: string;
 }>(), {
   traffic: null,
   isLoading: false,
   detailRoute: null,
+  summaryLabel: 'Hari Ini',
+  rangeDescription: 'hari ini',
+  trendTitle: 'Trend 7 Hari Terakhir',
 });
 
-const selectedVisitId = ref<string | null>(null);
+const selectedIpAddress = ref<string | null>(null);
 
 const geolocationMode = computed(() => props.traffic?.geolocationMode ?? 'disabled');
+const summaryLabel = computed(() => props.summaryLabel || 'Hari Ini');
+const rangeDescription = computed(() => props.rangeDescription || 'hari ini');
 
 const geolocationStatusLabel = computed(() => {
   switch (geolocationMode.value) {
@@ -47,23 +55,23 @@ const trafficCards = computed(() => {
 
   return [
     {
-      title: 'Pengunjung Hari Ini',
+      title: summaryLabel.value === 'Hari Ini' ? 'Pengunjung Hari Ini' : 'Total Pengunjung',
       value: traffic?.todayVisitors ?? 0,
-      helper: 'Visitor unik dari token browser',
+      helper: `Visitor unik dari token browser pada ${rangeDescription.value}`,
       icon: Users,
       tone: 'sky',
     },
     {
-      title: 'Page Views Hari Ini',
+      title: summaryLabel.value === 'Hari Ini' ? 'Page Views Hari Ini' : 'Total Page Views',
       value: traffic?.todayPageViews ?? 0,
-      helper: 'Semua page visit publik yang terekam',
+      helper: `Semua page visit publik yang terekam pada ${rangeDescription.value}`,
       icon: Activity,
       tone: 'amber',
     },
     {
       title: 'Sumber Teratas',
       value: traffic?.topSources[0]?.label ?? '-',
-      helper: `${traffic?.topSources[0]?.count ?? 0} kunjungan hari ini`,
+      helper: `${traffic?.topSources[0]?.count ?? 0} kunjungan pada ${rangeDescription.value}`,
       icon: Globe2,
       tone: 'emerald',
     },
@@ -158,18 +166,98 @@ const trendDots = (metric: TrendMetric) => {
   }));
 };
 
-const selectedVisit = computed(() => {
-  return props.traffic?.recentVisits.find((visit) => visit.id === selectedVisitId.value) ?? null;
+const shouldRenderTrendLabel = (index: number, total: number) => {
+  if (total <= 10) {
+    return true;
+  }
+
+  const interval = Math.ceil(total / 6);
+
+  return index === 0 || index === total - 1 || index % interval === 0;
+};
+
+const selectedIpSummary = computed<MostVisitedIpEntry | null>(() => {
+  const ipAddress = selectedIpAddress.value?.trim();
+
+  if (!ipAddress) {
+    return null;
+  }
+
+  const mostVisitedEntry = props.traffic?.mostVisitedIps.find((entry) => entry.ipAddress === ipAddress);
+
+  if (mostVisitedEntry) {
+    return mostVisitedEntry;
+  }
+
+  const relatedVisits = (props.traffic?.recentVisits || []).filter((visit) => visit.ipAddress?.trim() === ipAddress);
+
+  if (relatedVisits.length === 0) {
+    return null;
+  }
+
+  const orderedVisits = [...relatedVisits].sort((left, right) => {
+    return new Date(left.visitedAt || 0).getTime() - new Date(right.visitedAt || 0).getTime();
+  });
+  const latestVisit = orderedVisits[orderedVisits.length - 1];
+  const uniqueVisitors = new Set(
+    relatedVisits
+      .map((visit) => visit.visitorToken?.trim())
+      .filter((token): token is string => Boolean(token)),
+  ).size;
+
+  return {
+    ipAddress,
+    totalVisits: relatedVisits.length,
+    uniqueVisitors: uniqueVisitors || relatedVisits.length,
+    browser: latestVisit.browser,
+    countryName: latestVisit.countryName,
+    cityName: latestVisit.cityName,
+    firstVisitedAt: orderedVisits[0]?.visitedAt,
+    lastVisitedAt: latestVisit.visitedAt,
+  };
 });
 
-watch(() => props.traffic?.recentVisits || [], (visits) => {
-  if (visits.length === 0) {
-    selectedVisitId.value = null;
+const selectedIpVisits = computed(() => {
+  const ipAddress = selectedIpAddress.value?.trim();
+
+  if (!ipAddress) {
+    return [];
+  }
+
+  return (props.traffic?.recentVisits || []).filter((visit) => visit.ipAddress?.trim() === ipAddress);
+});
+
+const selectedIpDominantSource = computed(() => {
+  const counts = selectedIpVisits.value.reduce<Record<string, number>>((carry, visit) => {
+    const source = visit.source || 'Direct';
+    carry[source] = (carry[source] || 0) + 1;
+    return carry;
+  }, {});
+
+  const [label = 'Direct', count = 0] = Object.entries(counts).sort((left, right) => right[1] - left[1])[0] || [];
+
+  return { label, count };
+});
+
+const browserMax = computed(() => {
+  return Math.max(...(props.traffic?.topBrowsers.map((item) => item.count) || [0]), 1);
+});
+
+watch(() => [props.traffic?.mostVisitedIps || [], props.traffic?.recentVisits || []], ([mostVisitedIps, visits]) => {
+  const fallbackIp = mostVisitedIps[0]?.ipAddress || visits[0]?.ipAddress || null;
+
+  if (!fallbackIp) {
+    selectedIpAddress.value = null;
     return;
   }
 
-  if (!visits.some((visit) => visit.id === selectedVisitId.value)) {
-    selectedVisitId.value = visits[0].id;
+  const availableIps = new Set<string>([
+    ...mostVisitedIps.map((entry) => entry.ipAddress),
+    ...visits.map((visit) => visit.ipAddress || '').filter((ip): ip is string => Boolean(ip)),
+  ]);
+
+  if (!selectedIpAddress.value || !availableIps.has(selectedIpAddress.value)) {
+    selectedIpAddress.value = fallbackIp;
   }
 }, { immediate: true });
 
@@ -194,8 +282,12 @@ const scaleWidth = (value: number, max: number) => {
   return `${(value / max) * 100}%`;
 };
 
-const openVisitDetail = (visit: RecentVisitEntry) => {
-  selectedVisitId.value = visit.id;
+const selectIp = (ipAddress?: string | null) => {
+  if (!ipAddress || !ipAddress.trim()) {
+    return;
+  }
+
+  selectedIpAddress.value = ipAddress.trim();
 };
 
 const displayValue = (value?: string | null) => {
@@ -219,7 +311,7 @@ const formatDate = (value?: string | null) => {
     <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
       <div>
         <h2 class="text-lg font-semibold text-white">Traffic Monitoring Publik</h2>
-        <p class="mt-1 max-w-3xl text-sm text-slate-400">Pantau visitor hari ini, sumber traffic, dan asal pengunjung dari route publik SPA.</p>
+        <p class="mt-1 max-w-3xl text-sm text-slate-400">Pantau visitor, sumber traffic, dan asal pengunjung dari route publik SPA berdasarkan periode yang dipilih.</p>
       </div>
       <div class="flex items-center gap-3">
         <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]" :class="traffic?.geolocationEnabled ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200' : 'border-amber-500/20 bg-amber-500/10 text-amber-200'">
@@ -246,7 +338,7 @@ const formatDate = (value?: string | null) => {
             <div :class="['flex h-11 w-11 items-center justify-center rounded-2xl border bg-gradient-to-br', toneClass(card.tone)]">
               <component :is="card.icon" class="h-5 w-5" />
             </div>
-            <span class="text-[11px] uppercase tracking-[0.18em] text-slate-500">Hari ini</span>
+            <span class="text-[11px] uppercase tracking-[0.18em] text-slate-500">{{ summaryLabel }}</span>
           </div>
           <p class="mt-4 text-2xl font-semibold text-white">{{ card.value }}</p>
           <h3 class="mt-2 text-sm font-semibold text-slate-200">{{ card.title }}</h3>
@@ -257,8 +349,8 @@ const formatDate = (value?: string | null) => {
       <div class="mt-6 grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <section class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
           <div>
-            <h3 class="text-base font-semibold text-white">Trend 7 Hari Terakhir</h3>
-            <p class="mt-1 text-sm text-slate-400">Bandingkan page views dan visitor unik untuk melihat pergerakan traffic publik.</p>
+            <h3 class="text-base font-semibold text-white">{{ trendTitle }}</h3>
+            <p class="mt-1 text-sm text-slate-400">Bandingkan page views dan visitor unik untuk melihat pergerakan traffic publik dalam periode terpilih.</p>
           </div>
 
           <div v-if="(traffic?.dailyTrend.length || 0) === 0" class="mt-6 text-sm text-slate-400">
@@ -267,7 +359,7 @@ const formatDate = (value?: string | null) => {
 
           <div v-else class="mt-6">
             <div class="overflow-hidden rounded-[1.5rem] border border-white/10 bg-slate-950/40 p-4">
-              <svg class="h-72 w-full" :viewBox="`0 0 ${trendChartWidth} ${trendChartHeight}`" fill="none" role="img" aria-label="Grafik tren traffic 7 hari terakhir">
+              <svg class="h-72 w-full" :viewBox="`0 0 ${trendChartWidth} ${trendChartHeight}`" fill="none" role="img" :aria-label="trendTitle">
                 <g>
                   <line v-for="grid in trendGridLines" :key="grid.value + '-' + grid.y" :x1="trendChartPaddingX" :x2="trendChartWidth - trendChartPaddingX" :y1="grid.y" :y2="grid.y" stroke="rgba(148, 163, 184, 0.14)" stroke-dasharray="4 6" />
                   <text v-for="grid in trendGridLines" :key="'label-' + grid.value + '-' + grid.y" x="8" :y="grid.y + 4" fill="rgba(148, 163, 184, 0.72)" font-size="11">
@@ -290,9 +382,11 @@ const formatDate = (value?: string | null) => {
                   <circle :cx="point.x" :cy="point.y" r="8" fill="rgba(16, 185, 129, 0.16)" />
                 </g>
 
-                <text v-for="(point, index) in trendSeries" :key="point.date" :x="trendPointX(index, trendSeries.length)" :y="trendChartHeight - 12" fill="rgba(226, 232, 240, 0.86)" font-size="11" text-anchor="middle">
-                  {{ point.label }}
-                </text>
+                <template v-for="(point, index) in trendSeries" :key="point.date">
+                  <text v-if="shouldRenderTrendLabel(index, trendSeries.length)" :x="trendPointX(index, trendSeries.length)" :y="trendChartHeight - 12" fill="rgba(226, 232, 240, 0.86)" font-size="11" text-anchor="middle">
+                    {{ point.label }}
+                  </text>
+                </template>
               </svg>
             </div>
 
@@ -307,11 +401,13 @@ const formatDate = (value?: string | null) => {
               </span>
             </div>
 
-            <div class="mt-4 grid gap-3 md:grid-cols-3">
-              <div v-for="point in trendSeries" :key="'summary-' + point.date" class="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{{ point.label }}</p>
-                <p class="mt-2 text-sm text-white">{{ point.pageViews }} page views</p>
-                <p class="mt-1 text-sm text-slate-400">{{ point.visitors }} visitor unik</p>
+            <div class="mt-4 overflow-x-auto pb-2">
+              <div class="flex min-w-max gap-3">
+                <div v-for="point in trendSeries" :key="'summary-' + point.date" class="w-36 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                  <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{{ point.label }}</p>
+                  <p class="mt-2 text-sm text-white">{{ point.pageViews }} page views</p>
+                  <p class="mt-1 text-sm text-slate-400">{{ point.visitors }} visitor unik</p>
+                </div>
               </div>
             </div>
           </div>
@@ -320,7 +416,7 @@ const formatDate = (value?: string | null) => {
         <div class="grid gap-6">
           <section class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
             <h3 class="text-base font-semibold text-white">Sumber Traffic</h3>
-            <p class="mt-1 text-sm text-slate-400">Referrer dan UTM source yang paling banyak mengirim visitor hari ini.</p>
+            <p class="mt-1 text-sm text-slate-400">Referrer dan UTM source yang paling banyak mengirim visitor pada periode terpilih.</p>
 
             <div v-if="(traffic?.topSources.length || 0) === 0" class="mt-6 text-sm text-slate-400">
               Belum ada sumber traffic yang tercatat.
@@ -340,8 +436,29 @@ const formatDate = (value?: string | null) => {
           </section>
 
           <section class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
+            <h3 class="text-base font-semibold text-white">Top Browser</h3>
+            <p class="mt-1 text-sm text-slate-400">Browser yang paling sering muncul dalam traffic pada periode terpilih.</p>
+
+            <div v-if="(traffic?.topBrowsers.length || 0) === 0" class="mt-6 text-sm text-slate-400">
+              Belum ada browser yang tercatat.
+            </div>
+
+            <div v-else class="mt-6 space-y-4">
+              <div v-for="item in traffic?.topBrowsers || []" :key="item.label" class="space-y-2">
+                <div class="flex items-center justify-between gap-4 text-sm">
+                  <span class="font-medium text-white">{{ item.label }}</span>
+                  <span class="text-slate-400">{{ item.count }}</span>
+                </div>
+                <div class="h-2 overflow-hidden rounded-full bg-white/5">
+                  <div class="h-full rounded-full bg-gradient-to-r from-cyan-500 to-sky-400" :style="{ width: scaleWidth(item.count, browserMax) }" />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
             <h3 class="text-base font-semibold text-white">Asal Pengunjung</h3>
-            <p class="mt-1 text-sm text-slate-400">Negara teratas dan kota yang berhasil dikenali dari IP publik.</p>
+            <p class="mt-1 text-sm text-slate-400">Negara teratas dan kota yang berhasil dikenali dari IP publik pada periode terpilih.</p>
 
             <div v-if="(traffic?.topCountries.length || 0) === 0" class="mt-6 text-sm text-slate-400">
               Belum ada data lokasi yang bisa ditampilkan.
@@ -371,54 +488,15 @@ const formatDate = (value?: string | null) => {
         </div>
       </div>
 
-      <section class="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
-        <div class="border-b border-white/10 px-6 py-5">
-          <h3 class="text-base font-semibold text-white">Most Visit IP</h3>
-          <p class="mt-1 text-sm text-slate-400">IP yang paling sering muncul dari traffic yang sudah terekam, lengkap dengan browser terakhir dan lokasi terakhir yang dikenali.</p>
-        </div>
-
-        <div v-if="(traffic?.mostVisitedIps.length || 0) === 0" class="px-6 py-10 text-sm text-slate-400">
-          Belum ada data IP yang cukup untuk dirangkum.
-        </div>
-
-        <div v-else class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-white/5 text-left">
-            <thead class="bg-white/[0.03]">
-              <tr>
-                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">IP</th>
-                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Total Visit</th>
-                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Visitor Unik</th>
-                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Browser Terakhir</th>
-                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Negara</th>
-                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Terakhir Terlihat</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-white/5">
-              <tr v-for="entry in traffic?.mostVisitedIps || []" :key="entry.ipAddress" class="transition hover:bg-white/[0.04]">
-                <td class="px-5 py-4 align-top text-sm font-medium text-white">{{ entry.ipAddress }}</td>
-                <td class="px-5 py-4 align-top text-sm text-slate-300">{{ entry.totalVisits }}</td>
-                <td class="px-5 py-4 align-top text-sm text-slate-300">{{ entry.uniqueVisitors }}</td>
-                <td class="px-5 py-4 align-top text-sm text-slate-300">{{ displayValue(entry.browser) }}</td>
-                <td class="px-5 py-4 align-top">
-                  <p class="text-sm text-slate-300">{{ displayValue(entry.countryName) }}</p>
-                  <p class="mt-1 text-xs text-slate-500">{{ displayValue(entry.cityName) }}</p>
-                </td>
-                <td class="px-5 py-4 align-top text-sm text-slate-400">{{ formatDate(entry.lastVisitedAt) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <div class="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+      <div class="mt-6 grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
         <section class="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
           <div class="border-b border-white/10 px-6 py-5">
-            <h3 class="text-base font-semibold text-white">Aktivitas Traffic Terbaru</h3>
-            <p class="mt-1 text-sm text-slate-400">Baris traffic terbaru menampilkan IP, browser, asal negara, dan bisa dibuka untuk melihat seluruh detail visit.</p>
+            <h3 class="text-base font-semibold text-white">Most Visit IP</h3>
+            <p class="mt-1 text-sm text-slate-400">Tabel utama untuk investigasi IP yang paling aktif pada periode terpilih. Klik satu IP untuk membuka insight di panel kanan.</p>
           </div>
 
-          <div v-if="(traffic?.recentVisits.length || 0) === 0" class="px-6 py-10 text-sm text-slate-400">
-            Belum ada kunjungan publik yang terekam.
+          <div v-if="(traffic?.mostVisitedIps.length || 0) === 0" class="px-6 py-10 text-sm text-slate-400">
+            Belum ada data IP yang cukup untuk dirangkum.
           </div>
 
           <div v-else class="overflow-x-auto">
@@ -426,48 +504,32 @@ const formatDate = (value?: string | null) => {
               <thead class="bg-white/[0.03]">
                 <tr>
                   <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">IP</th>
+                  <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Total Visit</th>
+                  <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Visitor Unik</th>
                   <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Browser</th>
                   <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Negara</th>
-                  <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Sumber</th>
-                  <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Waktu</th>
-                  <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Aksi</th>
+                  <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Last Seen</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/5">
                 <tr
-                  v-for="visit in traffic?.recentVisits || []"
-                  :key="visit.id"
-                  :class="['cursor-pointer transition hover:bg-white/[0.04]', selectedVisitId === visit.id ? 'bg-sky-500/[0.08]' : '']"
-                  @click="openVisitDetail(visit)"
+                  v-for="entry in traffic?.mostVisitedIps || []"
+                  :key="entry.ipAddress"
+                  :class="['cursor-pointer transition hover:bg-white/[0.04]', selectedIpAddress === entry.ipAddress ? 'bg-sky-500/[0.08]' : '']"
+                  @click="selectIp(entry.ipAddress)"
                 >
-                  <td class="px-5 py-4 align-top text-sm text-slate-200">
-                    {{ displayValue(visit.ipAddress) }}
-                  </td>
                   <td class="px-5 py-4 align-top">
-                    <p class="text-sm font-medium text-white">{{ displayValue(visit.browser) }}</p>
-                    <p class="mt-1 text-xs text-slate-500">{{ displayValue(visit.medium || visit.source) }}</p>
+                    <p class="text-sm font-semibold text-white">{{ entry.ipAddress }}</p>
+                    <p class="mt-1 text-xs text-slate-500">Klik untuk lihat insight</p>
                   </td>
+                  <td class="px-5 py-4 align-top text-sm text-slate-300">{{ entry.totalVisits }}</td>
+                  <td class="px-5 py-4 align-top text-sm text-slate-300">{{ entry.uniqueVisitors }}</td>
+                  <td class="px-5 py-4 align-top text-sm text-slate-300">{{ displayValue(entry.browser) }}</td>
                   <td class="px-5 py-4 align-top">
-                    <p class="text-sm text-slate-200">{{ displayValue(visit.countryName) }}</p>
-                    <p class="mt-1 text-xs text-slate-500">{{ displayValue(visit.cityName) }}</p>
+                    <p class="text-sm text-slate-300">{{ displayValue(entry.countryName) }}</p>
+                    <p class="mt-1 text-xs text-slate-500">{{ displayValue(entry.cityName) }}</p>
                   </td>
-                  <td class="px-5 py-4 align-top">
-                    <span class="inline-flex rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">
-                      {{ visit.source }}
-                    </span>
-                  </td>
-                  <td class="px-5 py-4 align-top text-sm text-slate-400">
-                    {{ formatDate(visit.visitedAt) }}
-                  </td>
-                  <td class="px-5 py-4 align-top">
-                    <button
-                      type="button"
-                      class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/10"
-                      @click.stop="openVisitDetail(visit)"
-                    >
-                      Detail
-                    </button>
-                  </td>
+                  <td class="px-5 py-4 align-top text-sm text-slate-400">{{ formatDate(entry.lastVisitedAt) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -475,101 +537,114 @@ const formatDate = (value?: string | null) => {
         </section>
 
         <section class="glass-md self-start rounded-2xl border border-white/10 p-6 xl:sticky xl:top-6">
-          <div v-if="selectedVisit" class="space-y-6">
+          <div v-if="selectedIpSummary" class="space-y-6">
             <div class="border-b border-white/10 pb-5">
               <div class="flex flex-wrap items-center gap-2">
-                <h3 class="text-lg font-semibold text-white">Detail Visit</h3>
+                <h3 class="text-lg font-semibold text-white">IP Insight</h3>
                 <span class="rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">
-                  {{ selectedVisit.source }}
+                  {{ selectedIpSummary.ipAddress }}
                 </span>
               </div>
-              <p class="mt-2 text-sm text-slate-400">Data lengkap dari kunjungan yang dipilih, berdasarkan semua field yang saat ini disimpan oleh sistem traffic.</p>
+              <p class="mt-2 text-sm text-slate-400">Ringkasan yang lebih berguna untuk investigasi IP aktif pada periode yang dipilih.</p>
             </div>
 
-            <div class="grid gap-4 md:grid-cols-2">
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
               <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">IP Address</p>
-                <p class="mt-3 break-all text-sm text-white">{{ displayValue(selectedVisit.ipAddress) }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Jumlah Visit</p>
+                <p class="mt-3 text-2xl font-semibold text-white">{{ selectedIpSummary.totalVisits }}</p>
               </div>
               <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Browser</p>
-                <p class="mt-3 text-sm text-white">{{ displayValue(selectedVisit.browser) }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Visitor Unik</p>
+                <p class="mt-3 text-2xl font-semibold text-white">{{ selectedIpSummary.uniqueVisitors }}</p>
               </div>
               <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Negara</p>
-                <p class="mt-3 text-sm text-white">{{ displayValue(selectedVisit.countryName) }}</p>
-                <p class="mt-1 text-xs text-slate-500">Code: {{ displayValue(selectedVisit.countryCode) }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Browser Dominan</p>
+                <p class="mt-3 text-sm text-white">{{ displayValue(selectedIpSummary.browser) }}</p>
               </div>
               <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Kota / Lokasi</p>
-                <p class="mt-3 text-sm text-white">{{ displayValue(selectedVisit.cityName) }}</p>
-                <p class="mt-1 text-xs text-slate-500">{{ displayValue(selectedVisit.location) }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Source Dominan</p>
+                <p class="mt-3 text-sm text-white">{{ selectedIpDominantSource.label }}</p>
+                <p class="mt-1 text-xs text-slate-500">{{ selectedIpDominantSource.count }} visit</p>
               </div>
               <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Waktu Visit</p>
-                <p class="mt-3 text-sm text-white">{{ formatDate(selectedVisit.visitedAt) }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Lokasi</p>
+                <p class="mt-3 text-sm text-white">{{ displayValue(selectedIpSummary.countryName) }}</p>
+                <p class="mt-1 text-xs text-slate-500">{{ displayValue(selectedIpSummary.cityName) }}</p>
               </div>
               <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Visitor Token</p>
-                <p class="mt-3 break-all text-sm text-white">{{ displayValue(selectedVisit.visitorToken) }}</p>
-              </div>
-            </div>
-
-            <div class="grid gap-4 md:grid-cols-2">
-              <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Path</p>
-                <p class="mt-3 break-all text-sm text-white">{{ displayValue(selectedVisit.path) }}</p>
-              </div>
-              <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Route Name</p>
-                <p class="mt-3 text-sm text-white">{{ displayValue(selectedVisit.routeName) }}</p>
-              </div>
-              <div class="rounded-xl border border-white/10 bg-white/5 p-4 md:col-span-2">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Page Title</p>
-                <p class="mt-3 text-sm text-white">{{ displayValue(selectedVisit.pageTitle) }}</p>
-              </div>
-            </div>
-
-            <div class="grid gap-4 md:grid-cols-3">
-              <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Source</p>
-                <p class="mt-3 text-sm text-white">{{ displayValue(selectedVisit.source) }}</p>
-              </div>
-              <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Medium</p>
-                <p class="mt-3 text-sm text-white">{{ displayValue(selectedVisit.medium) }}</p>
-              </div>
-              <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">UTM Campaign</p>
-                <p class="mt-3 text-sm text-white">{{ displayValue(selectedVisit.utmCampaign) }}</p>
-              </div>
-            </div>
-
-            <div class="grid gap-4 md:grid-cols-2">
-              <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Referrer Host</p>
-                <p class="mt-3 break-all text-sm text-white">{{ displayValue(selectedVisit.referrerHost) }}</p>
-              </div>
-              <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Referrer URL</p>
-                <p class="mt-3 break-all text-sm text-white">{{ displayValue(selectedVisit.referrerUrl) }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">First Seen</p>
+                <p class="mt-3 text-sm text-white">{{ formatDate(selectedIpSummary.firstVisitedAt) }}</p>
+                <p class="mt-1 text-xs text-slate-500">Last seen {{ formatDate(selectedIpSummary.lastVisitedAt) }}</p>
               </div>
             </div>
 
             <div class="rounded-xl border border-white/10 bg-white/5 p-4">
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">User Agent</p>
-              <p class="mt-3 break-all text-sm leading-6 text-slate-200">{{ displayValue(selectedVisit.userAgent) }}</p>
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Insight</p>
+              <p class="mt-3 text-sm leading-6 text-slate-200">
+                IP <span class="font-semibold text-white">{{ selectedIpSummary.ipAddress }}</span>
+                muncul <span class="font-semibold text-white">{{ selectedIpSummary.totalVisits }} kali</span>
+                pada {{ rangeDescription }}, dengan
+                <span class="font-semibold text-white">{{ selectedIpSummary.uniqueVisitors }} visitor unik</span>.
+                Browser yang paling terlihat adalah
+                <span class="font-semibold text-white">{{ displayValue(selectedIpSummary.browser) }}</span>
+                dan source dominannya
+                <span class="font-semibold text-white">{{ selectedIpDominantSource.label }}</span>.
+              </p>
             </div>
           </div>
 
           <div v-else class="flex min-h-[24rem] flex-col items-center justify-center gap-3 text-center">
             <div>
-              <h3 class="text-base font-semibold text-white">Pilih visit</h3>
-              <p class="mt-1 text-sm text-slate-400">Klik salah satu baris pada datatable untuk membuka detail traffic lengkap.</p>
+              <h3 class="text-base font-semibold text-white">Pilih IP</h3>
+              <p class="mt-1 text-sm text-slate-400">Klik IP dari tabel utama atau log terbaru untuk membuka insight IP.</p>
             </div>
           </div>
         </section>
       </div>
+
+      <section class="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
+        <div class="border-b border-white/10 px-6 py-5">
+          <h3 class="text-base font-semibold text-white">Aktivitas Traffic Terbaru</h3>
+          <p class="mt-1 text-sm text-slate-400">Log singkat visit terbaru. Klik salah satu baris kalau ingin mengganti IP yang sedang diinvestigasi.</p>
+        </div>
+
+        <div v-if="(traffic?.recentVisits.length || 0) === 0" class="px-6 py-10 text-sm text-slate-400">
+          Belum ada kunjungan publik yang terekam.
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-white/5 text-left">
+            <thead class="bg-white/[0.03]">
+              <tr>
+                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">IP</th>
+                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Sumber</th>
+                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Browser</th>
+                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Waktu</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+              <tr
+                v-for="visit in traffic?.recentVisits || []"
+                :key="visit.id"
+                :class="['cursor-pointer transition hover:bg-white/[0.04]', selectedIpAddress === visit.ipAddress ? 'bg-sky-500/[0.08]' : '']"
+                @click="selectIp(visit.ipAddress)"
+              >
+                <td class="px-5 py-4 align-top">
+                  <p class="text-sm font-medium text-white">{{ displayValue(visit.ipAddress) }}</p>
+                  <p class="mt-1 text-xs text-slate-500">{{ displayValue(visit.countryName) }}</p>
+                </td>
+                <td class="px-5 py-4 align-top">
+                  <span class="inline-flex rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-sky-200">
+                    {{ visit.source }}
+                  </span>
+                </td>
+                <td class="px-5 py-4 align-top text-sm text-slate-300">{{ displayValue(visit.browser) }}</td>
+                <td class="px-5 py-4 align-top text-sm text-slate-400">{{ formatDate(visit.visitedAt) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </template>
   </section>
 </template>

@@ -8,6 +8,7 @@ use App\Models\VisitorVisit;
 use App\Support\TrafficSourceResolver;
 use App\Support\VisitorLocationResolver;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class VisitorVisitController extends Controller
 {
@@ -20,6 +21,7 @@ class VisitorVisitController extends Controller
     {
         $data = $request->validated();
         $path = '/'.ltrim((string) $data['path'], '/');
+        $clientIp = $this->resolveClientIp($request);
 
         if (str_starts_with($path, '/admin')) {
             return response()->json([
@@ -34,7 +36,7 @@ class VisitorVisitController extends Controller
             $request->getHost(),
         );
 
-        $location = $this->visitorLocationResolver->resolve($request->ip());
+        $location = $this->visitorLocationResolver->resolve($clientIp);
 
         $visit = VisitorVisit::query()->create([
             'visitor_token' => $data['visitorToken'],
@@ -46,7 +48,7 @@ class VisitorVisitController extends Controller
             'source' => $source['source'],
             'medium' => $source['medium'],
             'utm_campaign' => $data['utmCampaign'] ?? null,
-            'ip_address' => $request->ip(),
+            'ip_address' => $clientIp,
             'user_agent' => $request->userAgent(),
             'country_code' => $location['countryCode'],
             'country_name' => $location['countryName'],
@@ -58,5 +60,41 @@ class VisitorVisitController extends Controller
             'tracked' => true,
             'visitId' => (string) $visit->id,
         ], 201);
+    }
+
+    private function resolveClientIp(Request $request): ?string
+    {
+        foreach (['CF-Connecting-IP', 'True-Client-IP'] as $header) {
+            $resolvedIp = $this->validIp($request->header($header));
+
+            if ($resolvedIp !== null) {
+                return $resolvedIp;
+            }
+        }
+
+        $forwardedFor = $request->header('X-Forwarded-For');
+
+        if (is_string($forwardedFor) && trim($forwardedFor) !== '') {
+            foreach (explode(',', $forwardedFor) as $candidate) {
+                $resolvedIp = $this->validIp($candidate);
+
+                if ($resolvedIp !== null) {
+                    return $resolvedIp;
+                }
+            }
+        }
+
+        return $this->validIp($request->ip());
+    }
+
+    private function validIp(string|array|null $value): ?string
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        $candidate = trim($value);
+
+        return filter_var($candidate, FILTER_VALIDATE_IP) !== false ? $candidate : null;
     }
 }
