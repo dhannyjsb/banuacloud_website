@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CaseStudy;
+use App\Models\FaqItem;
 use App\Models\FeatureItem;
 use App\Models\HeroContent;
 use App\Models\MarketingPage;
 use App\Models\Testimonial;
+use App\Support\AdminAuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -35,6 +38,23 @@ class ContentController extends Controller
             'testimonials.*.company' => ['required', 'string', 'max:255'],
             'testimonials.*.content' => ['required', 'string', 'max:1000'],
             'testimonials.*.avatar' => ['nullable', 'string', 'max:255'],
+            'faqs' => ['present', 'array'],
+            'faqs.*.question' => ['required', 'string', 'max:255'],
+            'faqs.*.answer' => ['required', 'string', 'max:2000'],
+            'caseStudies' => ['present', 'array'],
+            'caseStudies.*.title' => ['required', 'string', 'max:255'],
+            'caseStudies.*.clientName' => ['required', 'string', 'max:255'],
+            'caseStudies.*.category' => ['required', 'string', 'max:100'],
+            'caseStudies.*.summary' => ['required', 'string', 'max:500'],
+            'caseStudies.*.challenge' => ['required', 'string', 'max:2000'],
+            'caseStudies.*.solution' => ['required', 'string', 'max:2000'],
+            'caseStudies.*.outcome' => ['required', 'string', 'max:2000'],
+            'caseStudies.*.tags' => ['present', 'array'],
+            'caseStudies.*.tags.*' => ['required', 'string', 'max:50'],
+            'caseStudies.*.galleryImages' => ['present', 'array', 'size:3'],
+            'caseStudies.*.galleryImages.*' => ['nullable', 'string', 'max:2048'],
+            'caseStudies.*.isFeatured' => ['required', 'boolean'],
+            'caseStudiesEnabled' => ['required', 'boolean'],
             'marketingCtas' => ['present', 'array'],
             'marketingCtas.*.pageKey' => ['required', 'string', 'max:255'],
             'marketingCtas.*.heroPrimaryTarget' => ['nullable', 'string', 'max:255'],
@@ -80,6 +100,32 @@ class ContentController extends Controller
                 ]);
             }
 
+            FaqItem::query()->delete();
+            foreach ($data['faqs'] as $index => $faq) {
+                FaqItem::query()->create([
+                    'question' => $faq['question'],
+                    'answer' => $faq['answer'],
+                    'sort_order' => $index,
+                ]);
+            }
+
+            CaseStudy::query()->delete();
+            foreach ($data['caseStudies'] as $index => $caseStudy) {
+                CaseStudy::query()->create([
+                    'title' => $caseStudy['title'],
+                    'client_name' => $caseStudy['clientName'],
+                    'category' => $caseStudy['category'],
+                    'summary' => $caseStudy['summary'],
+                    'challenge' => $caseStudy['challenge'],
+                    'solution' => $caseStudy['solution'],
+                    'outcome' => $caseStudy['outcome'],
+                    'tags' => $caseStudy['tags'],
+                    'gallery_images' => $this->normalizeGalleryImages($caseStudy['galleryImages'] ?? []),
+                    'is_featured' => $caseStudy['isFeatured'],
+                    'sort_order' => $index,
+                ]);
+            }
+
             foreach ($data['marketingCtas'] as $marketingCta) {
                 $page = MarketingPage::query()->where('page_key', $marketingCta['pageKey'])->first();
 
@@ -93,10 +139,27 @@ class ContentController extends Controller
                 $payload['ctaPrimaryTarget'] = $marketingCta['ctaPrimaryTarget'];
                 $payload['ctaSecondaryTarget'] = $marketingCta['ctaSecondaryTarget'];
 
+                if ($marketingCta['pageKey'] === 'learn-more') {
+                    $payload['caseStudiesEnabled'] = $data['caseStudiesEnabled'];
+                }
+
                 $page->payload = $payload;
                 $page->save();
             }
         });
+
+        AdminAuditLogger::record(
+            $request->user(),
+            'content',
+            'updated',
+            sprintf(
+                'Updated hero, %d features, %d testimonials, %d FAQs, and %d case studies.',
+                count($data['features']),
+                count($data['testimonials']),
+                count($data['faqs']),
+                count($data['caseStudies']),
+            ),
+        );
 
         return response()->json($this->payload());
     }
@@ -134,8 +197,68 @@ class ContentController extends Controller
                     'avatar' => $testimonial->avatar,
                 ])
                 ->all(),
+            'faqs' => FaqItem::query()
+                ->orderBy('sort_order')
+                ->get()
+                ->map(fn(FaqItem $faq): array => [
+                    'id' => (string) $faq->id,
+                    'question' => $faq->question,
+                    'answer' => $faq->answer,
+                ])
+                ->all(),
+            'caseStudies' => CaseStudy::query()
+                ->orderBy('sort_order')
+                ->get()
+                ->map(fn(CaseStudy $caseStudy): array => [
+                    'id' => (string) $caseStudy->id,
+                    'title' => $caseStudy->title,
+                    'clientName' => $caseStudy->client_name,
+                    'category' => $caseStudy->category,
+                    'summary' => $caseStudy->summary,
+                    'challenge' => $caseStudy->challenge,
+                    'solution' => $caseStudy->solution,
+                    'outcome' => $caseStudy->outcome,
+                    'tags' => $caseStudy->tags ?? [],
+                    'galleryImages' => $this->normalizeGalleryImages($caseStudy->gallery_images ?? []),
+                    'isFeatured' => $caseStudy->is_featured,
+                ])
+                ->all(),
+            'caseStudiesEnabled' => $this->caseStudiesEnabled(),
             'marketingCtas' => $this->marketingCtaPayload(),
         ];
+    }
+
+    private function caseStudiesEnabled(): bool
+    {
+        $payload = MarketingPage::query()
+            ->where('page_key', 'learn-more')
+            ->value('payload');
+
+        if (! is_array($payload)) {
+            return true;
+        }
+
+        return (bool) ($payload['caseStudiesEnabled'] ?? true);
+    }
+
+    private function normalizeGalleryImages(array $galleryImages): array
+    {
+        $images = collect($galleryImages)
+            ->map(fn(mixed $image): string => is_string($image) ? trim($image) : '')
+            ->pad(3, '')
+            ->take(3)
+            ->values()
+            ->all();
+
+        if (collect($images)->filter()->isEmpty()) {
+            return [
+                '/gallery/case-study-1.svg',
+                '/gallery/case-study-2.svg',
+                '/gallery/case-study-3.svg',
+            ];
+        }
+
+        return $images;
     }
 
     private function marketingCtaPayload(): array

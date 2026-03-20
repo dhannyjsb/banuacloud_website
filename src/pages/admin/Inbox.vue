@@ -7,17 +7,23 @@ import {
   ChevronRight,
   Inbox,
   Mail,
-  MessageSquareText,
   Phone,
   RefreshCw,
   Search,
   SlidersHorizontal,
 } from 'lucide-vue-next';
-import { fetchAdminInbox, markAdminInboxMessageRead, type InboxMessage } from '../../lib/siteApi';
+import {
+  contactCategoryOptions,
+  fetchAdminInbox,
+  inboxWorkflowOptions,
+  markAdminInboxMessageRead,
+  type InboxMessage,
+  updateAdminInboxWorkflow,
+} from '../../lib/siteApi';
 import { useAuthStore } from '../../stores/auth';
 
-type StatusFilter = 'all' | 'unread' | 'read';
-type SortKey = 'submittedAt' | 'name' | 'company';
+type ReadFilter = 'all' | 'unread' | 'read';
+type SortKey = 'submittedAt' | 'name' | 'company' | 'category';
 type SortDirection = 'asc' | 'desc';
 
 const authStore = useAuthStore();
@@ -26,29 +32,81 @@ const isLoading = ref(false);
 const errorMessage = ref('');
 const selectedMessageId = ref<string | null>(null);
 const isUpdatingMessageId = ref<string | null>(null);
-const stats = ref({ total: 0, unread: 0 });
+const stats = ref({ total: 0, unread: 0, followUp: 0, byStatus: {} as Record<string, number> });
 const searchQuery = ref('');
-const statusFilter = ref<StatusFilter>('all');
+const readFilter = ref<ReadFilter>('all');
+const workflowFilter = ref('all');
+const categoryFilter = ref('all');
 const sortKey = ref<SortKey>('submittedAt');
 const sortDirection = ref<SortDirection>('desc');
 const rowsPerPage = ref(10);
 const currentPage = ref(1);
+const selectedWorkflowStatus = ref('new');
 
 const selectedMessage = computed(() => {
   return messages.value.find((message) => message.id === selectedMessageId.value) ?? null;
 });
 
-const readCount = computed(() => Math.max(0, stats.value.total - stats.value.unread));
+const categoryLabel = (value: string) => {
+  return contactCategoryOptions.find((option) => option.value === value)?.label || value;
+};
+
+const workflowLabel = (value: string) => {
+  return inboxWorkflowOptions.find((option) => option.value === value)?.label || value;
+};
+
+const workflowTone = (value: string) => {
+  switch (value) {
+    case 'new':
+      return 'border-sky-500/20 bg-sky-500/10 text-sky-200';
+    case 'in_progress':
+      return 'border-amber-500/20 bg-amber-500/10 text-amber-200';
+    case 'contacted':
+      return 'border-violet-500/20 bg-violet-500/10 text-violet-200';
+    default:
+      return 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200';
+  }
+};
+
+const syncStats = () => {
+  const byStatus = inboxWorkflowOptions.reduce<Record<string, number>>((carry, option) => {
+    carry[option.value] = messages.value.filter((message) => message.status === option.value).length;
+    return carry;
+  }, {});
+
+  stats.value = {
+    total: messages.value.length,
+    unread: messages.value.filter((message) => !message.isRead).length,
+    followUp: messages.value.filter((message) => ['new', 'in_progress'].includes(message.status)).length,
+    byStatus,
+  };
+};
+
+const dispatchSummaryUpdate = () => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent('admin-dashboard-updated'));
+};
 
 const filteredMessages = computed(() => {
   const normalizedSearch = searchQuery.value.trim().toLowerCase();
 
   return messages.value.filter((message) => {
-    if (statusFilter.value === 'unread' && message.isRead) {
+    if (readFilter.value === 'unread' && message.isRead) {
       return false;
     }
 
-    if (statusFilter.value === 'read' && !message.isRead) {
+    if (readFilter.value === 'read' && !message.isRead) {
+      return false;
+    }
+
+    if (workflowFilter.value !== 'all' && message.status !== workflowFilter.value) {
+      return false;
+    }
+
+    if (categoryFilter.value !== 'all' && message.category !== categoryFilter.value) {
       return false;
     }
 
@@ -61,6 +119,8 @@ const filteredMessages = computed(() => {
       message.email,
       message.whatsapp,
       message.company || '',
+      message.category,
+      message.status,
       message.message,
     ].some((value) => value.toLowerCase().includes(normalizedSearch));
   });
@@ -88,13 +148,10 @@ const sortedMessages = computed(() => {
   return items;
 });
 
-const totalPages = computed(() => {
-  return Math.max(1, Math.ceil(sortedMessages.value.length / rowsPerPage.value));
-});
+const totalPages = computed(() => Math.max(1, Math.ceil(sortedMessages.value.length / rowsPerPage.value)));
 
 const paginatedMessages = computed(() => {
   const startIndex = (currentPage.value - 1) * rowsPerPage.value;
-
   return sortedMessages.value.slice(startIndex, startIndex + rowsPerPage.value);
 });
 
@@ -106,17 +163,14 @@ const showingFrom = computed(() => {
   return (currentPage.value - 1) * rowsPerPage.value + 1;
 });
 
-const showingTo = computed(() => {
-  return Math.min(currentPage.value * rowsPerPage.value, sortedMessages.value.length);
-});
+const showingTo = computed(() => Math.min(currentPage.value * rowsPerPage.value, sortedMessages.value.length));
 
 const hasActiveFilters = computed(() => {
-  return searchQuery.value.trim() !== '' || statusFilter.value !== 'all';
+  return searchQuery.value.trim() !== '' || readFilter.value !== 'all' || workflowFilter.value !== 'all' || categoryFilter.value !== 'all';
 });
 
 const selectedWhatsappLink = computed(() => {
   const raw = selectedMessage.value?.whatsapp.replace(/\D/g, '') || '';
-
   return raw ? `https://wa.me/${raw}` : '';
 });
 
@@ -132,16 +186,9 @@ const formatDate = (value?: string | null) => {
 };
 
 const syncMessage = (updatedMessage: InboxMessage) => {
-  messages.value = messages.value.map((message) => {
-    return message.id === updatedMessage.id ? updatedMessage : message;
-  });
-};
-
-const syncStats = () => {
-  stats.value = {
-    total: messages.value.length,
-    unread: messages.value.filter((message) => !message.isRead).length,
-  };
+  messages.value = messages.value.map((message) => (message.id === updatedMessage.id ? updatedMessage : message));
+  syncStats();
+  dispatchSummaryUpdate();
 };
 
 const loadInbox = async () => {
@@ -158,6 +205,7 @@ const loadInbox = async () => {
     const payload = await fetchAdminInbox(authStore.token);
     messages.value = payload.messages;
     stats.value = payload.stats;
+    dispatchSummaryUpdate();
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Failed to load inbox.';
   } finally {
@@ -181,7 +229,6 @@ const markMessageAsRead = async (message: InboxMessage) => {
 
     const payload = await markAdminInboxMessageRead(authStore.token, message.id);
     syncMessage(payload.message);
-    syncStats();
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Failed to update message status.';
   } finally {
@@ -189,29 +236,48 @@ const markMessageAsRead = async (message: InboxMessage) => {
   }
 };
 
+const updateWorkflow = async () => {
+  if (!selectedMessage.value || selectedWorkflowStatus.value === selectedMessage.value.status) {
+    return;
+  }
+
+  isUpdatingMessageId.value = selectedMessage.value.id;
+
+  try {
+    await authStore.ensureAuthState();
+
+    if (!authStore.token) {
+      throw new Error('Admin session not found. Please sign in again.');
+    }
+
+    const payload = await updateAdminInboxWorkflow(authStore.token, selectedMessage.value.id, selectedWorkflowStatus.value);
+    syncMessage(payload.message);
+    selectedWorkflowStatus.value = payload.message.status;
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Failed to update workflow status.';
+  } finally {
+    isUpdatingMessageId.value = null;
+  }
+};
+
 const openMessage = async (message: InboxMessage) => {
   selectedMessageId.value = message.id;
+  selectedWorkflowStatus.value = message.status;
   await markMessageAsRead(message);
 };
 
 const resetFilters = () => {
   searchQuery.value = '';
-  statusFilter.value = 'all';
+  readFilter.value = 'all';
+  workflowFilter.value = 'all';
+  categoryFilter.value = 'all';
   sortKey.value = 'submittedAt';
   sortDirection.value = 'desc';
   rowsPerPage.value = 10;
   currentPage.value = 1;
 };
 
-const goToPreviousPage = () => {
-  currentPage.value = Math.max(1, currentPage.value - 1);
-};
-
-const goToNextPage = () => {
-  currentPage.value = Math.min(totalPages.value, currentPage.value + 1);
-};
-
-watch([searchQuery, statusFilter, sortKey, sortDirection, rowsPerPage], () => {
+watch([searchQuery, readFilter, workflowFilter, categoryFilter, sortKey, sortDirection, rowsPerPage], () => {
   currentPage.value = 1;
 });
 
@@ -232,6 +298,12 @@ watch(sortedMessages, (items) => {
   }
 }, { immediate: true });
 
+watch(selectedMessage, (message) => {
+  if (message) {
+    selectedWorkflowStatus.value = message.status;
+  }
+}, { immediate: true });
+
 onMounted(() => {
   void loadInbox();
 });
@@ -247,11 +319,11 @@ onMounted(() => {
           </span>
           <div>
             <h1 class="text-2xl font-bold text-white">Kotak Masuk</h1>
-            <p class="mt-1 max-w-2xl text-sm leading-relaxed text-slate-400">Pesan dari form kontak publik masuk ke halaman ini. Gunakan pencarian, filter, dan pagination untuk menelusuri pesan dengan pola datatable.</p>
+            <p class="mt-1 max-w-2xl text-sm leading-relaxed text-slate-400">Pesan dari form publik masuk ke sini lengkap dengan kategori kebutuhan dan status workflow agar tindak lanjut lebih rapi.</p>
           </div>
         </div>
 
-        <div class="grid gap-3 sm:grid-cols-3 xl:min-w-[28rem]">
+        <div class="grid gap-3 sm:grid-cols-3 xl:min-w-[32rem]">
           <div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-4">
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Total</p>
             <p class="mt-3 text-2xl font-semibold text-white">{{ stats.total }}</p>
@@ -260,87 +332,68 @@ onMounted(() => {
             <p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-200/80">Belum Dibaca</p>
             <p class="mt-3 text-2xl font-semibold text-white">{{ stats.unread }}</p>
           </div>
-          <div class="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-4">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200/80">Sudah Dibaca</p>
-            <p class="mt-3 text-2xl font-semibold text-white">{{ readCount }}</p>
+          <div class="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-4">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200/80">Perlu Follow Up</p>
+            <p class="mt-3 text-2xl font-semibold text-white">{{ stats.followUp }}</p>
           </div>
         </div>
       </div>
     </div>
 
-    <div
-      v-if="errorMessage"
-      class="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300"
-    >
+    <div v-if="errorMessage" class="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
       {{ errorMessage }}
     </div>
 
     <div class="grid gap-6 xl:grid-cols-[1.28fr_0.72fr]">
-      <section class="glass-md flex h-full min-h-[42rem] flex-col rounded-2xl border border-white/10 overflow-hidden">
+      <section class="glass-md flex min-h-[44rem] flex-col overflow-hidden rounded-2xl border border-white/10">
         <header class="flex flex-col gap-5 border-b border-white/10 px-5 py-5 lg:px-6">
           <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 class="text-base font-semibold text-white">Datatable Inbox</h2>
-              <p class="mt-1 text-xs text-slate-400">Klik baris untuk membuka detail dan menandainya sebagai sudah dibaca.</p>
+              <p class="mt-1 text-xs text-slate-400">Filter berdasarkan status baca, workflow, dan kategori kebutuhan sebelum membuka detail pesan.</p>
             </div>
 
-            <button
-              type="button"
-              class="inline-flex items-center gap-2 self-start rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/10"
-              :disabled="isLoading"
-              @click="loadInbox"
-            >
+            <button type="button" class="inline-flex items-center gap-2 self-start rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/10" :disabled="isLoading" @click="loadInbox">
               <RefreshCw class="h-4 w-4" :class="isLoading ? 'animate-spin' : ''" />
               Refresh
             </button>
           </div>
 
-          <div class="grid gap-3 lg:grid-cols-[1.2fr_0.7fr_0.7fr_0.55fr_auto]">
+          <div class="grid gap-3 lg:grid-cols-[1.2fr_0.7fr_0.7fr_0.7fr_0.55fr_auto]">
             <label class="relative block">
               <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-              <input
-                v-model="searchQuery"
-                type="text"
-                class="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-sky-500/40 focus:bg-white/10"
-                placeholder="Cari nama, email, WhatsApp, perusahaan, atau isi pesan"
-              />
+              <input v-model="searchQuery" type="text" class="w-full rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-sky-500/40" placeholder="Cari nama, email, perusahaan, kategori, atau isi pesan" />
             </label>
 
             <label class="relative block">
               <SlidersHorizontal class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-              <select
-                v-model="statusFilter"
-                class="w-full appearance-none rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-4 text-sm text-white outline-none transition focus:border-sky-500/40 focus:bg-white/10"
-              >
-                <option value="all" class="bg-slate-950 text-white">Semua status</option>
+              <select v-model="readFilter" class="w-full appearance-none rounded-xl border border-white/10 bg-white/5 py-3 pl-10 pr-4 text-sm text-white outline-none transition focus:border-sky-500/40">
+                <option value="all" class="bg-slate-950 text-white">Baca: Semua</option>
                 <option value="unread" class="bg-slate-950 text-white">Belum dibaca</option>
                 <option value="read" class="bg-slate-950 text-white">Sudah dibaca</option>
               </select>
             </label>
 
-            <select
-              v-model="sortKey"
-              class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-500/40 focus:bg-white/10"
-            >
-              <option value="submittedAt" class="bg-slate-950 text-white">Urutkan: Tanggal</option>
-              <option value="name" class="bg-slate-950 text-white">Urutkan: Nama</option>
-              <option value="company" class="bg-slate-950 text-white">Urutkan: Perusahaan</option>
+            <select v-model="workflowFilter" class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-500/40">
+              <option value="all" class="bg-slate-950 text-white">Workflow: Semua</option>
+              <option v-for="option in inboxWorkflowOptions" :key="option.value" :value="option.value" class="bg-slate-950 text-white">
+                {{ option.label }}
+              </option>
             </select>
 
-            <select
-              v-model="sortDirection"
-              class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-500/40 focus:bg-white/10"
-            >
+            <select v-model="categoryFilter" class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-500/40">
+              <option value="all" class="bg-slate-950 text-white">Kategori: Semua</option>
+              <option v-for="option in contactCategoryOptions" :key="option.value" :value="option.value" class="bg-slate-950 text-white">
+                {{ option.label }}
+              </option>
+            </select>
+
+            <select v-model="sortDirection" class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-500/40">
               <option value="desc" class="bg-slate-950 text-white">Terbaru dulu</option>
               <option value="asc" class="bg-slate-950 text-white">Terlama dulu</option>
             </select>
 
-            <button
-              v-if="hasActiveFilters"
-              type="button"
-              class="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/10"
-              @click="resetFilters"
-            >
+            <button v-if="hasActiveFilters" type="button" class="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-slate-200 transition hover:bg-white/10" @click="resetFilters">
               Reset
             </button>
           </div>
@@ -362,10 +415,10 @@ onMounted(() => {
               <thead class="bg-white/[0.03]">
                 <tr>
                   <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pengirim</th>
+                  <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Kategori</th>
+                  <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Workflow</th>
                   <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Kontak</th>
-                  <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Perusahaan</th>
                   <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Ringkasan</th>
-                  <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Status</th>
                   <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Masuk</th>
                   <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Aksi</th>
                 </tr>
@@ -375,10 +428,7 @@ onMounted(() => {
                 <tr
                   v-for="message in paginatedMessages"
                   :key="message.id"
-                  :class="[
-                    'cursor-pointer transition hover:bg-white/[0.04]',
-                    selectedMessageId === message.id ? 'bg-sky-500/[0.08]' : ''
-                  ]"
+                  :class="['cursor-pointer transition hover:bg-white/[0.04]', selectedMessageId === message.id ? 'bg-sky-500/[0.08]' : '']"
                   @click="openMessage(message)"
                 >
                   <td class="px-5 py-4 align-top">
@@ -386,24 +436,26 @@ onMounted(() => {
                       <span :class="['mt-1 h-2.5 w-2.5 rounded-full', message.isRead ? 'bg-slate-600' : 'bg-emerald-400']" />
                       <div>
                         <p class="text-sm font-semibold text-white">{{ message.name }}</p>
-                        <p class="mt-1 text-xs text-slate-500">ID #{{ message.id }}</p>
+                        <p class="mt-1 text-xs text-slate-500">{{ message.company || 'Tanpa perusahaan' }}</p>
                       </div>
                     </div>
+                  </td>
+                  <td class="px-5 py-4 align-top">
+                    <span class="inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-300">
+                      {{ categoryLabel(message.category) }}
+                    </span>
+                  </td>
+                  <td class="px-5 py-4 align-top">
+                    <span :class="['inline-flex rounded-full border px-3 py-1 text-xs font-semibold', workflowTone(message.status)]">
+                      {{ workflowLabel(message.status) }}
+                    </span>
                   </td>
                   <td class="px-5 py-4 align-top">
                     <p class="text-sm text-slate-200">{{ message.email }}</p>
                     <p class="mt-1 text-xs text-slate-500">{{ message.whatsapp }}</p>
                   </td>
-                  <td class="px-5 py-4 align-top text-sm text-slate-300">
-                    {{ message.company || '-' }}
-                  </td>
                   <td class="px-5 py-4 align-top">
                     <p class="max-w-sm line-clamp-2 text-sm leading-6 text-slate-300">{{ message.message }}</p>
-                  </td>
-                  <td class="px-5 py-4 align-top">
-                    <span :class="message.isRead ? 'inline-flex rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-slate-300' : 'inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200'">
-                      {{ message.isRead ? 'Sudah dibaca' : 'Belum dibaca' }}
-                    </span>
                   </td>
                   <td class="px-5 py-4 align-top text-sm text-slate-400">
                     {{ formatDate(message.submittedAt) }}
@@ -431,10 +483,7 @@ onMounted(() => {
               <span>Menampilkan {{ showingFrom }}-{{ showingTo }} dari {{ sortedMessages.length }} pesan</span>
               <label class="flex items-center gap-3">
                 <span>Baris</span>
-                <select
-                  v-model="rowsPerPage"
-                  class="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition focus:border-sky-500/40"
-                >
+                <select v-model="rowsPerPage" class="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none transition focus:border-sky-500/40">
                   <option :value="5" class="bg-slate-950 text-white">5</option>
                   <option :value="10" class="bg-slate-950 text-white">10</option>
                   <option :value="20" class="bg-slate-950 text-white">20</option>
@@ -443,22 +492,12 @@ onMounted(() => {
             </div>
 
             <div class="flex items-center gap-2 self-end">
-              <button
-                type="button"
-                class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-                :disabled="currentPage === 1"
-                @click="goToPreviousPage"
-              >
+              <button type="button" class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50" :disabled="currentPage === 1" @click="currentPage = Math.max(1, currentPage - 1)">
                 <ChevronLeft class="h-4 w-4" />
                 Sebelumnya
               </button>
               <span class="px-3 text-sm text-slate-400">Halaman {{ currentPage }} / {{ totalPages }}</span>
-              <button
-                type="button"
-                class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
-                :disabled="currentPage === totalPages"
-                @click="goToNextPage"
-              >
+              <button type="button" class="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50" :disabled="currentPage === totalPages" @click="currentPage = Math.min(totalPages, currentPage + 1)">
                 Berikutnya
                 <ChevronRight class="h-4 w-4" />
               </button>
@@ -467,7 +506,7 @@ onMounted(() => {
         </div>
       </section>
 
-      <section class="glass-md rounded-2xl border border-white/10 p-6 xl:sticky xl:top-6 self-start">
+      <section class="glass-md self-start rounded-2xl border border-white/10 p-6 xl:sticky xl:top-6">
         <div v-if="selectedMessage" class="space-y-6">
           <div class="flex flex-wrap items-start justify-between gap-4 border-b border-white/10 pb-5">
             <div>
@@ -481,20 +520,11 @@ onMounted(() => {
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-              <a
-                :href="`mailto:${selectedMessage.email}`"
-                class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/10"
-              >
+              <a :href="`mailto:${selectedMessage.email}`" class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/10">
                 <Mail class="h-4 w-4" />
                 Email
               </a>
-              <a
-                v-if="selectedWhatsappLink"
-                :href="selectedWhatsappLink"
-                target="_blank"
-                rel="noreferrer"
-                class="inline-flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2.5 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/15"
-              >
+              <a v-if="selectedWhatsappLink" :href="selectedWhatsappLink" target="_blank" rel="noreferrer" class="inline-flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2.5 text-sm font-medium text-emerald-200 transition hover:bg-emerald-500/15">
                 <Phone class="h-4 w-4" />
                 WhatsApp
               </a>
@@ -518,36 +548,52 @@ onMounted(() => {
               <p class="mt-3 text-sm text-white">{{ selectedMessage.whatsapp }}</p>
             </div>
 
-            <div class="rounded-xl border border-white/10 bg-white/5 p-4 md:col-span-2">
+            <div class="rounded-xl border border-white/10 bg-white/5 p-4">
               <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
                 <Building2 class="h-3.5 w-3.5" />
                 Perusahaan
               </div>
               <p class="mt-3 text-sm text-white">{{ selectedMessage.company || '-' }}</p>
             </div>
+
+            <div class="rounded-xl border border-white/10 bg-white/5 p-4">
+              <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+                <SlidersHorizontal class="h-3.5 w-3.5" />
+                Kategori
+              </div>
+              <p class="mt-3 text-sm text-white">{{ categoryLabel(selectedMessage.category) }}</p>
+            </div>
           </div>
 
-          <div class="rounded-2xl border border-white/10 bg-[#020617]/40 p-5">
-            <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-              <MessageSquareText class="h-3.5 w-3.5" />
-              Pesan
+          <div class="rounded-xl border border-white/10 bg-white/5 p-4">
+            <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <label class="flex-1 space-y-2">
+                <span class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Workflow Status</span>
+                <select v-model="selectedWorkflowStatus" class="w-full rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-white outline-none transition focus:border-sky-500/40">
+                  <option v-for="option in inboxWorkflowOptions" :key="option.value" :value="option.value" class="bg-slate-950 text-white">
+                    {{ option.label }}
+                  </option>
+                </select>
+              </label>
+
+              <button type="button" class="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60" :disabled="isUpdatingMessageId === selectedMessage.id || selectedWorkflowStatus === selectedMessage.status" @click="updateWorkflow">
+                {{ isUpdatingMessageId === selectedMessage.id ? 'Menyimpan...' : 'Update Workflow' }}
+              </button>
             </div>
-            <p class="mt-4 whitespace-pre-line text-sm leading-7 text-slate-200">{{ selectedMessage.message }}</p>
+            <p class="mt-3 text-xs text-slate-500">Terakhir diperbarui: {{ formatDate(selectedMessage.statusChangedAt || selectedMessage.submittedAt) }}</p>
           </div>
 
-          <div class="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-slate-500">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <span>Masuk: {{ formatDate(selectedMessage.submittedAt) }}</span>
-              <span>Dibaca: {{ formatDate(selectedMessage.readAt) }}</span>
-            </div>
+          <div class="rounded-xl border border-white/10 bg-white/5 p-4">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Isi Pesan</p>
+            <p class="mt-3 whitespace-pre-line text-sm leading-7 text-slate-200">{{ selectedMessage.message }}</p>
           </div>
         </div>
 
-        <div v-else class="flex min-h-72 flex-col items-center justify-center gap-3 text-center">
+        <div v-else class="flex min-h-[24rem] flex-col items-center justify-center gap-3 text-center">
           <Inbox class="h-10 w-10 text-slate-500" />
           <div>
-            <h3 class="text-base font-semibold text-white">Pilih pesan</h3>
-            <p class="mt-1 text-sm text-slate-400">Detail pesan akan tampil di panel ini.</p>
+            <h2 class="text-base font-semibold text-white">Pilih pesan</h2>
+            <p class="mt-1 text-sm text-slate-400">Klik salah satu baris pada tabel untuk membuka detail inbox dan mengubah workflow.</p>
           </div>
         </div>
       </section>

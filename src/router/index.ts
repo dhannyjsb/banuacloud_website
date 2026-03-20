@@ -9,6 +9,7 @@ import AdminLogin from '../pages/admin/AdminLogin.vue';
 import AdminDashboard from '../pages/admin/Dashboard.vue';
 import AdminContent from '../pages/admin/Content.vue';
 import AdminInbox from '../pages/admin/Inbox.vue';
+import AdminAuditLogs from '../pages/admin/AuditLogs.vue';
 import AdminServices from '../pages/admin/Services.vue';
 import AdminSettings from '../pages/admin/Settings.vue';
 import AdminLayout from '../layouts/AdminLayout.vue';
@@ -63,6 +64,12 @@ const adminRoutes = [
         name: 'AdminInbox',
         component: AdminInbox,
         meta: { title: 'Inbox' }
+      },
+      {
+        path: 'audit-logs',
+        name: 'AdminAuditLogs',
+        component: AdminAuditLogs,
+        meta: { title: 'Audit Logs' }
       },
       {
         path: 'services',

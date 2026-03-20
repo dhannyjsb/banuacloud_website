@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CaseStudy;
+use App\Models\FaqItem;
 use App\Models\FeatureItem;
 use App\Models\HeroContent;
 use App\Models\MarketingPage;
@@ -107,13 +109,43 @@ class SiteDataController extends Controller
             ->where('page_key', $pageKey)
             ->firstOrFail();
 
-        return array_merge($this->marketingCtaDefaults($pageKey), $page->payload ?? []);
+        $payload = array_merge($this->marketingCtaDefaults($pageKey), $page->payload ?? []);
+
+        if ($pageKey === 'learn-more') {
+            $faqItems = FaqItem::query()->orderBy('sort_order')->get();
+            $caseStudies = CaseStudy::query()->orderBy('sort_order')->get();
+
+            $payload['faqs'] = $faqItems->isNotEmpty()
+                ? $faqItems->map(fn(FaqItem $faq): array => [
+                    'question' => $faq->question,
+                    'answer' => $faq->answer,
+                ])->values()->all()
+                : ($payload['faqs'] ?? []);
+
+            $payload['caseStudies'] = $caseStudies->isNotEmpty()
+                ? $caseStudies->map(fn(CaseStudy $caseStudy): array => [
+                    'title' => $caseStudy->title,
+                    'clientName' => $caseStudy->client_name,
+                    'category' => $caseStudy->category,
+                    'summary' => $caseStudy->summary,
+                    'challenge' => $caseStudy->challenge,
+                    'solution' => $caseStudy->solution,
+                    'outcome' => $caseStudy->outcome,
+                    'tags' => $caseStudy->tags ?? [],
+                    'galleryImages' => $this->normalizeGalleryImages($caseStudy->gallery_images ?? []),
+                    'isFeatured' => $caseStudy->is_featured,
+                ])->values()->all()
+                : ($payload['caseStudies'] ?? []);
+        }
+
+        return $payload;
     }
 
     private function marketingCtaDefaults(string $pageKey): array
     {
         if ($pageKey === 'learn-more') {
             return [
+                'caseStudiesEnabled' => true,
                 'ctaPrimaryTarget' => '/services/cloud-vps',
                 'ctaSecondaryTarget' => '#contact',
             ];
@@ -125,6 +157,26 @@ class SiteDataController extends Controller
             'ctaPrimaryTarget' => '#service-contact',
             'ctaSecondaryTarget' => '#contact',
         ];
+    }
+
+    private function normalizeGalleryImages(array $galleryImages): array
+    {
+        $images = collect($galleryImages)
+            ->map(fn(mixed $image): string => is_string($image) ? trim($image) : '')
+            ->pad(3, '')
+            ->take(3)
+            ->values()
+            ->all();
+
+        if (collect($images)->filter()->isEmpty()) {
+            return [
+                '/gallery/case-study-1.svg',
+                '/gallery/case-study-2.svg',
+                '/gallery/case-study-3.svg',
+            ];
+        }
+
+        return $images;
     }
 
     private function formatSettings(): array

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import {
   LayoutDashboard,
   FileText,
   MessageSquare,
+  History,
   Package,
   Settings,
   Lock,
@@ -16,6 +17,7 @@ import {
   Bell,
   User
 } from 'lucide-vue-next';
+import { fetchAdminDashboard, type AdminDashboardPayload } from '../lib/siteApi';
 import { useAuthStore } from '../stores/auth';
 import { useSiteBootstrap } from '../composables/useSiteBootstrap';
 
@@ -29,6 +31,8 @@ const isMobileMenuOpen = ref(false);
 const isUserMenuOpen = ref(false);
 const userMenuRef = ref<HTMLElement | null>(null);
 const currentYear = new Date().getFullYear();
+const overview = ref<AdminDashboardPayload | null>(null);
+let refreshIntervalId: number | null = null;
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
@@ -62,33 +66,46 @@ const handleLogout = async () => {
   router.push('/admin/login');
 };
 
-const menuItems = [
+const unreadCount = computed(() => overview.value?.stats.unreadMessages ?? 0);
+
+const menuItems = computed(() => [
   {
     name: 'Dashboard',
     path: '/admin',
-    icon: LayoutDashboard
+    icon: LayoutDashboard,
+    badge: '',
   },
   {
     name: 'Content',
     path: '/admin/content',
-    icon: FileText
+    icon: FileText,
+    badge: '',
   },
   {
     name: 'Inbox',
     path: '/admin/inbox',
-    icon: MessageSquare
+    icon: MessageSquare,
+    badge: unreadCount.value > 0 ? String(unreadCount.value) : '',
+  },
+  {
+    name: 'Audit Log',
+    path: '/admin/audit-logs',
+    icon: History,
+    badge: '',
   },
   {
     name: 'Services',
     path: '/admin/services',
-    icon: Package
+    icon: Package,
+    badge: '',
   },
   {
     name: 'Settings',
     path: '/admin/settings',
-    icon: Settings
+    icon: Settings,
+    badge: '',
   },
-];
+]);
 
 const isActiveRoute = (path: string) => {
   if (path === '/admin') {
@@ -114,14 +131,48 @@ const handleEscape = (event: KeyboardEvent) => {
   }
 };
 
+const handleDashboardRefresh = () => {
+  void loadOverview();
+};
+
+const loadOverview = async () => {
+  await authStore.ensureAuthState();
+
+  if (!authStore.token) {
+    overview.value = null;
+    return;
+  }
+
+  try {
+    overview.value = await fetchAdminDashboard(authStore.token);
+  } catch {
+    overview.value = null;
+  }
+};
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
   document.addEventListener('keydown', handleEscape);
+  window.addEventListener('admin-dashboard-updated', handleDashboardRefresh);
+  void loadOverview();
+
+  refreshIntervalId = window.setInterval(() => {
+    void loadOverview();
+  }, 60000);
 });
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
   document.removeEventListener('keydown', handleEscape);
+  window.removeEventListener('admin-dashboard-updated', handleDashboardRefresh);
+
+  if (refreshIntervalId) {
+    window.clearInterval(refreshIntervalId);
+  }
+});
+
+watch(() => route.fullPath, () => {
+  void loadOverview();
 });
 </script>
 
@@ -194,6 +245,15 @@ onUnmounted(() => {
           >
             {{ item.name }}
           </span>
+          <span
+            v-if="item.badge"
+            :class="[
+              'rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-300',
+              isSidebarOpen ? 'ml-auto' : 'hidden'
+            ]"
+          >
+            {{ item.badge }}
+          </span>
           <ChevronRight
             v-if="isActiveRoute(item.path) && isSidebarOpen"
             class="w-4 h-4 ml-auto"
@@ -226,7 +286,12 @@ onUnmounted(() => {
           <!-- Notifications -->
           <button class="relative p-2 rounded-lg text-slate-400 hover:bg-white/5 hover:text-white transition-colors">
             <Bell class="w-5 h-5" />
-            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+            <span
+              v-if="unreadCount > 0"
+              class="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-semibold text-white"
+            >
+              {{ unreadCount > 99 ? '99+' : unreadCount }}
+            </span>
           </button>
 
           <!-- User Menu -->

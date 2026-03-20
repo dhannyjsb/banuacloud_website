@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Service;
 use App\Models\ServicePlan;
+use App\Support\AdminAuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -66,6 +67,13 @@ class ServicesController extends Controller
             }
         });
 
+        AdminAuditLogger::record(
+            $request->user(),
+            'services',
+            'updated',
+            sprintf('Updated %d services and rebuilt pricing plans.', count($data['services'])),
+        );
+
         return response()->json([
             'services' => $this->formattedServices(),
         ]);
@@ -77,14 +85,14 @@ class ServicesController extends Controller
             ->with('plans')
             ->orderBy('sort_order')
             ->get()
-            ->map(fn(Service $service): array => [
+            ->map(fn (Service $service): array => [
                 'id' => (string) $service->id,
                 'name' => $service->name,
                 'slug' => $service->slug,
                 'description' => $service->description,
                 'icon' => $service->icon_key,
                 'enabled' => $service->enabled,
-                'plans' => $service->plans->map(fn(ServicePlan $plan): array => [
+                'plans' => $service->plans->map(fn (ServicePlan $plan): array => [
                     'id' => (string) $plan->id,
                     'name' => $plan->name,
                     'price' => $plan->price,

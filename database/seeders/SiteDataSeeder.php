@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\CaseStudy;
+use App\Models\FaqItem;
 use App\Models\FeatureItem;
 use App\Models\HeroContent;
 use App\Models\MarketingPage;
@@ -77,6 +79,24 @@ class SiteDataSeeder extends Seeder
             ) {
                 Testimonial::query()->create([
                     ...$testimonial,
+                    'sort_order' => $index,
+                ]);
+            }
+        }
+
+        if (FaqItem::query()->doesntExist()) {
+            foreach ($this->defaultFaqs() as $index => $faq) {
+                FaqItem::query()->create([
+                    ...$faq,
+                    'sort_order' => $index,
+                ]);
+            }
+        }
+
+        if (CaseStudy::query()->doesntExist()) {
+            foreach ($this->defaultCaseStudies() as $index => $caseStudy) {
+                CaseStudy::query()->create([
+                    ...$caseStudy,
                     'sort_order' => $index,
                 ]);
             }
@@ -355,16 +375,14 @@ class SiteDataSeeder extends Seeder
                     ['icon' => 'Globe2', 'title' => 'Jaringan Global', 'description' => '15+ data center di berbagai wilayah dengan latensi rendah untuk pengguna lintas lokasi.'],
                     ['icon' => 'Star', 'title' => 'Dukungan 24/7', 'description' => 'Tim support profesional siap membantu kapan pun Anda membutuhkan respons teknis.'],
                 ],
+                'caseStudyBadge' => 'Riwayat Proyek',
+                'caseStudyTitle' => 'Portofolio singkat untuk kebutuhan infrastruktur dan implementasi bisnis',
+                'caseStudyDescription' => 'Contoh proyek di bawah ini menunjukkan pola kerja kami dari tantangan awal, solusi yang diimplementasikan, sampai hasil operasional yang dicapai.',
+                'caseStudiesEnabled' => true,
                 'faqBadge' => 'FAQ',
                 'faqTitle' => 'Pertanyaan Umum',
                 'faqDescription' => 'Temukan jawaban untuk pertanyaan yang sering diajukan tentang layanan kami.',
-                'faqs' => [
-                    ['question' => 'Bagaimana cara memilih layanan yang tepat untuk bisnis saya?', 'answer' => 'Tim sales kami siap membantu Anda memilih layanan yang sesuai dengan kebutuhan. Anda dapat menghubungi kami melalui live chat, email, atau telepon untuk berkonsultasi secara gratis.'],
-                    ['question' => 'Apakah saya bisa upgrade layanan di kemudian hari?', 'answer' => 'Tentu. Semua layanan kami dapat di-upgrade kapan saja. Anda cukup mengajukan upgrade melalui panel klien kami, dan tim kami akan memprosesnya dalam waktu singkat.'],
-                    ['question' => 'Berapa lama waktu setup layanan?', 'answer' => 'Cloud VPS biasanya siap dalam 1-24 jam. Web hosting dan domain dapat aktif dalam hitungan menit setelah pembayaran terkonfirmasi.'],
-                    ['question' => 'Apakah ada garansi uptime?', 'answer' => 'Ya, kami memberikan garansi uptime 99.9% untuk layanan infrastruktur utama. Jika uptime tidak terpenuhi, Anda berhak mendapatkan kompensasi sesuai SLA.'],
-                    ['question' => 'Bagaimana sistem support Banua Cloud Nusantara?', 'answer' => 'Kami menyediakan support 24/7 melalui ticket system, live chat, dan telepon. Tim support kami terdiri dari teknisi berpengalaman yang siap membantu Anda kapan saja.'],
-                ],
+                'faqs' => $this->defaultFaqs(),
                 'ctaTitle' => 'Butuh partner untuk cloud, jaringan, atau implementasi sistem?',
                 'ctaDescription' => 'Diskusikan kebutuhan perusahaan Anda bersama tim Banua Cloud Nusantara, mulai dari konsultasi, pembangunan jaringan, sampai pengelolaan infrastruktur.',
                 'ctaPrimary' => 'Jadwalkan Diskusi',
@@ -709,6 +727,59 @@ class SiteDataSeeder extends Seeder
         }
 
         return $pages;
+    }
+
+    private function defaultFaqs(): array
+    {
+        return [
+            ['question' => 'Bagaimana cara memilih layanan yang tepat untuk bisnis saya?', 'answer' => 'Tim sales kami siap membantu Anda memilih layanan yang sesuai dengan kebutuhan. Anda dapat menghubungi kami melalui live chat, email, atau telepon untuk berkonsultasi secara gratis.'],
+            ['question' => 'Apakah saya bisa upgrade layanan di kemudian hari?', 'answer' => 'Tentu. Semua layanan kami dapat di-upgrade kapan saja. Anda cukup mengajukan upgrade melalui panel klien kami, dan tim kami akan memprosesnya dalam waktu singkat.'],
+            ['question' => 'Berapa lama waktu setup layanan?', 'answer' => 'Cloud VPS biasanya siap dalam 1-24 jam. Web hosting dan domain dapat aktif dalam hitungan menit setelah pembayaran terkonfirmasi.'],
+            ['question' => 'Apakah Banua Cloud Nusantara juga menangani jaringan gedung?', 'answer' => 'Ya. Selain layanan cloud dan hosting, kami juga membantu konstruksi, revitalisasi, dan penataan jaringan kantor maupun gedung sesuai kebutuhan operasional perusahaan.'],
+            ['question' => 'Bagaimana sistem support Banua Cloud Nusantara?', 'answer' => 'Kami menyediakan support 24/7 melalui ticket system, live chat, dan telepon. Tim support kami terdiri dari teknisi berpengalaman yang siap membantu Anda kapan saja.'],
+        ];
+    }
+
+    private function defaultCaseStudies(): array
+    {
+        return [
+            [
+                'title' => 'Revitalisasi Jaringan Kantor Multi-Lantai',
+                'client_name' => 'PT Pilar Niaga Banua',
+                'category' => 'jaringan-gedung',
+                'summary' => 'Penataan ulang backbone dan distribusi jaringan untuk kantor pusat dengan kebutuhan perangkat lintas divisi.',
+                'challenge' => 'Topologi jaringan lama tidak terdokumentasi, titik akses tidak merata, dan downtime sering terjadi saat beban operasional meningkat.',
+                'solution' => 'Kami menyusun audit titik jaringan, redesign segmentasi VLAN, merapikan rack, dan membangun standar labeling serta monitoring dasar untuk tim internal.',
+                'outcome' => 'Akses jaringan menjadi lebih stabil, distribusi perangkat lebih mudah ditelusuri, dan tim operasional memiliki baseline dokumentasi untuk pengembangan berikutnya.',
+                'tags' => ['Audit jaringan', 'VLAN', 'Dokumentasi'],
+                'gallery_images' => ['/gallery/case-study-1.svg', '/gallery/case-study-2.svg', '/gallery/case-study-3.svg'],
+                'is_featured' => true,
+            ],
+            [
+                'title' => 'Migrasi Beban Kerja ke Cloud VPS Terkelola',
+                'client_name' => 'CV Sinar Data Nusantara',
+                'category' => 'cloud',
+                'summary' => 'Pemindahan aplikasi internal dan portal klien ke environment cloud yang lebih rapi dan mudah dipantau.',
+                'challenge' => 'Server lama sulit diskalakan, backup tidak konsisten, dan proses deployment masih manual sehingga sering menimbulkan gangguan saat update.',
+                'solution' => 'Tim kami menyiapkan environment VPS baru, backup terjadwal, hardening dasar, serta alur deployment yang lebih terkontrol untuk tim pengembang.',
+                'outcome' => 'Tim klien mendapatkan proses rilis yang lebih aman, kapasitas infrastruktur lebih jelas, dan backup menjadi bagian dari rutinitas operasional.',
+                'tags' => ['Cloud VPS', 'Backup', 'Deployment'],
+                'gallery_images' => ['/gallery/case-study-2.svg', '/gallery/case-study-3.svg', '/gallery/case-study-1.svg'],
+                'is_featured' => true,
+            ],
+            [
+                'title' => 'Pengembangan Aplikasi Request Internal',
+                'client_name' => 'PT Mitra Operasi Kalimantan',
+                'category' => 'aplikasi',
+                'summary' => 'Pembuatan aplikasi web internal untuk proses request layanan dan pelacakan tindak lanjut antardivisi.',
+                'challenge' => 'Permintaan masih dikirim lewat chat dan spreadsheet, sehingga approval, prioritas, dan riwayat pekerjaan sulit ditelusuri.',
+                'solution' => 'Kami merancang aplikasi berbasis web dengan alur pengajuan, status pekerjaan, notifikasi, dan rekap sederhana agar sesuai dengan ritme tim operasional.',
+                'outcome' => 'Permintaan internal menjadi lebih terstruktur, tindak lanjut lebih mudah dipantau, dan pimpinan memiliki visibilitas atas antrean pekerjaan.',
+                'tags' => ['Web app', 'Workflow', 'Internal tools'],
+                'gallery_images' => ['/gallery/case-study-3.svg', '/gallery/case-study-1.svg', '/gallery/case-study-2.svg'],
+                'is_featured' => false,
+            ],
+        ];
     }
 
     private function marketingPageCtaTargets(string $pageKey): array

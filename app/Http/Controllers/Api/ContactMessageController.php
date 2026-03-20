@@ -18,7 +18,10 @@ class ContactMessageController extends Controller
             'email' => $data['email'],
             'whatsapp' => $data['whatsapp'],
             'company' => $data['company'] ?? null,
+            'category' => $data['category'],
             'message' => $data['message'],
+            'status' => 'new',
+            'status_changed_at' => now(),
         ]);
 
         return response()->json([

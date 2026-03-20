@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AuditLogController;
 use App\Http\Controllers\Api\Admin\ContentController;
+use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\Admin\InboxController;
 use App\Http\Controllers\Api\Admin\ServicesController;
 use App\Http\Controllers\Api\Admin\SettingsController;
@@ -28,11 +30,15 @@ Route::prefix('site')->group(function (): void {
 });
 
 Route::middleware(['auth:sanctum', 'admin.access'])->prefix('admin')->group(function (): void {
+    Route::get('/dashboard', [DashboardController::class, 'show']);
     Route::get('/content', [ContentController::class, 'show']);
     Route::put('/content', [ContentController::class, 'update']);
 
     Route::get('/inbox', [InboxController::class, 'index']);
     Route::patch('/inbox/{contactMessage}/read', [InboxController::class, 'markAsRead']);
+    Route::patch('/inbox/{contactMessage}/workflow', [InboxController::class, 'updateWorkflow']);
+
+    Route::get('/audit-logs', [AuditLogController::class, 'index']);
 
     Route::get('/services', [ServicesController::class, 'show']);
     Route::put('/services', [ServicesController::class, 'update']);

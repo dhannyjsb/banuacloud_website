@@ -2,7 +2,7 @@
 import { computed, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ArrowUpRight, LoaderCircle, Mail, MapPin, Phone, SendHorizonal } from 'lucide-vue-next';
-import { submitContactMessage } from '../../lib/siteApi';
+import { contactCategoryOptions, submitContactMessage } from '../../lib/siteApi';
 import { useSiteBootstrap } from '../../composables/useSiteBootstrap';
 
 const route = useRoute();
@@ -30,6 +30,7 @@ const contactForm = reactive({
   email: '',
   whatsapp: '',
   company: '',
+  category: 'konsultasi',
   message: '',
 });
 
@@ -42,6 +43,7 @@ const resetContactForm = () => {
   contactForm.email = '';
   contactForm.whatsapp = '';
   contactForm.company = '';
+  contactForm.category = 'konsultasi';
   contactForm.message = '';
 };
 
@@ -56,6 +58,7 @@ const handleSubmit = async () => {
       email: contactForm.email.trim(),
       whatsapp: contactForm.whatsapp.trim(),
       company: contactForm.company.trim() || undefined,
+      category: contactForm.category,
       message: contactForm.message.trim(),
     });
 
@@ -138,6 +141,22 @@ const handleSubmit = async () => {
                   class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
                   placeholder="Opsional"
                 />
+              </label>
+
+              <label class="space-y-2 md:col-span-2">
+                <span class="text-sm font-medium text-slate-700">Kategori kebutuhan</span>
+                <select
+                  v-model="contactForm.category"
+                  class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10"
+                >
+                  <option
+                    v-for="option in contactCategoryOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
               </label>
 
               <label class="space-y-2 md:col-span-2">

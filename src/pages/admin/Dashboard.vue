@@ -1,269 +1,262 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Users, 
-  Package, 
-  DollarSign, 
-  Eye,
-  MessageSquare,
-  ArrowUpRight,
-  ArrowDownRight
-} from 'lucide-vue-next';
+import { computed, onMounted, ref } from 'vue';
+import { FileText, History, MessageSquare, Package, RefreshCw } from 'lucide-vue-next';
+import { contactCategoryOptions, fetchAdminDashboard, inboxWorkflowOptions, type AdminDashboardPayload } from '../../lib/siteApi';
+import { useAuthStore } from '../../stores/auth';
 
-interface StatCard {
-  title: string;
-  value: string;
-  change: string;
-  changeType: 'positive' | 'negative';
-  icon: any;
-  color: string;
-}
+const authStore = useAuthStore();
+const dashboard = ref<AdminDashboardPayload | null>(null);
+const isLoading = ref(false);
+const errorMessage = ref('');
 
-interface RecentOrder {
-  id: string;
-  customer: string;
-  service: string;
-  amount: string;
-  status: 'pending' | 'completed' | 'cancelled';
-  date: string;
-}
+const cards = computed(() => {
+  const stats = dashboard.value?.stats;
 
-const stats = ref<StatCard[]>([
-  {
-    title: 'Total Visitors',
-    value: '12,456',
-    change: '+12.5%',
-    changeType: 'positive',
-    icon: Eye,
-    color: 'sky'
-  },
-  {
-    title: 'Active Services',
-    value: '156',
-    change: '+8.2%',
-    changeType: 'positive',
-    icon: Package,
-    color: 'cyan'
-  },
-  {
-    title: 'Total Revenue',
-    value: 'Rp 45.2M',
-    change: '+23.1%',
-    changeType: 'positive',
-    icon: DollarSign,
-    color: 'green'
-  },
-  {
-    title: 'New Messages',
-    value: '28',
-    change: '-2.4%',
-    changeType: 'negative',
-    icon: MessageSquare,
-    color: 'violet'
-  }
-]);
+  return [
+    {
+      title: 'Total Pesan Masuk',
+      value: stats?.totalMessages ?? 0,
+      helper: `${stats?.unreadMessages ?? 0} belum dibaca`,
+      icon: MessageSquare,
+      tone: 'sky',
+    },
+    {
+      title: 'Perlu Follow Up',
+      value: stats?.followUpMessages ?? 0,
+      helper: 'Status baru atau sedang diproses',
+      icon: History,
+      tone: 'amber',
+    },
+    {
+      title: 'Layanan Aktif',
+      value: stats?.activeServices ?? 0,
+      helper: `${stats?.testimonials ?? 0} testimonial aktif`,
+      icon: Package,
+      tone: 'emerald',
+    },
+    {
+      title: 'Konten Profil',
+      value: (stats?.faqs ?? 0) + (stats?.caseStudies ?? 0),
+      helper: `${stats?.faqs ?? 0} FAQ, ${stats?.caseStudies ?? 0} case study`,
+      icon: FileText,
+      tone: 'violet',
+    },
+  ];
+});
 
-const recentOrders = ref<RecentOrder[]>([
-  { id: '1', customer: 'PT Maju Jaya', service: 'Cloud VPS 4GB', amount: 'Rp 299.000', status: 'completed', date: '2 min ago' },
-  { id: '2', customer: 'CV Teknologi', service: 'Web Hosting Business', amount: 'Rp 59.000', status: 'pending', date: '15 min ago' },
-  { id: '3', customer: 'Indonesia Digital', service: 'Domain .com', amount: 'Rp 149.000', status: 'completed', date: '1 hour ago' },
-  { id: '4', customer: 'Startup Hub', service: 'Cloud VPS 8GB', amount: 'Rp 499.000', status: 'cancelled', date: '3 hours ago' },
-  { id: '5', customer: 'Tech Corp', service: 'Backup Service', amount: 'Rp 199.000', status: 'completed', date: '5 hours ago' },
-]);
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'completed': return 'text-green-400 bg-green-400/10';
-    case 'pending': return 'text-yellow-400 bg-yellow-400/10';
-    case 'cancelled': return 'text-red-400 bg-red-400/10';
-    default: return 'text-slate-400 bg-slate-400/10';
+const toneClass = (tone: string) => {
+  switch (tone) {
+    case 'sky':
+      return 'from-sky-500/20 to-sky-500/5 text-sky-300 border-sky-500/20';
+    case 'amber':
+      return 'from-amber-500/20 to-amber-500/5 text-amber-300 border-amber-500/20';
+    case 'emerald':
+      return 'from-emerald-500/20 to-emerald-500/5 text-emerald-300 border-emerald-500/20';
+    default:
+      return 'from-violet-500/20 to-violet-500/5 text-violet-300 border-violet-500/20';
   }
 };
 
-const getIconColor = (color: string) => {
-  switch (color) {
-    case 'sky': return 'from-sky-500/20 to-sky-500/5 text-sky-400';
-    case 'cyan': return 'from-cyan-500/20 to-cyan-500/5 text-cyan-400';
-    case 'green': return 'from-green-500/20 to-green-500/5 text-green-400';
-    case 'violet': return 'from-violet-500/20 to-violet-500/5 text-violet-400';
-    default: return 'from-slate-500/20 to-slate-500/5 text-slate-400';
+const workflowLabel = (key: string) => {
+  return inboxWorkflowOptions.find((option) => option.value === key)?.label || key;
+};
+
+const categoryLabel = (key: string) => {
+  return contactCategoryOptions.find((option) => option.value === key)?.label || key;
+};
+
+const workflowMax = computed(() => {
+  const counts = dashboard.value?.workflow.map((item) => item.count) || [0];
+  return Math.max(...counts, 1);
+});
+
+const formatDate = (value?: string | null) => {
+  if (!value) {
+    return '-';
+  }
+
+  return new Intl.DateTimeFormat('id-ID', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+};
+
+const loadDashboard = async () => {
+  isLoading.value = true;
+  errorMessage.value = '';
+
+  try {
+    await authStore.ensureAuthState();
+
+    if (!authStore.token) {
+      throw new Error('Admin session not found. Please sign in again.');
+    }
+
+    dashboard.value = await fetchAdminDashboard(authStore.token);
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Failed to load dashboard.';
+  } finally {
+    isLoading.value = false;
   }
 };
 
-const popularServices = ref([
-  { name: 'Cloud VPS', orders: 45, revenue: 'Rp 13.5M' },
-  { name: 'Web Hosting', orders: 38, revenue: 'Rp 2.2M' },
-  { name: 'Domain Registration', orders: 28, revenue: 'Rp 4.2M' },
-  { name: 'Backup Service', orders: 15, revenue: 'Rp 3.0M' },
-]);
+onMounted(() => {
+  void loadDashboard();
+});
 </script>
 
 <template>
-  <div class="space-y-8">
-    <!-- Page Header -->
-    <div>
-      <h1 class="text-2xl font-bold text-white">Dashboard</h1>
-      <p class="text-slate-400 mt-1">Welcome back! Here's what's happening with your business.</p>
-    </div>
-
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <div 
-        v-for="stat in stats" 
-        :key="stat.title"
-        class="glass-md p-6 rounded-xl border border-white/10"
-      >
-        <div class="flex items-start justify-between">
-          <div 
-            :class="[
-              'w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br',
-              getIconColor(stat.color)
-            ]"
-          >
-            <component :is="stat.icon" class="w-6 h-6" />
-          </div>
-          <div 
-            :class="[
-              'flex items-center gap-1 text-sm font-medium',
-              stat.changeType === 'positive' ? 'text-green-400' : 'text-red-400'
-            ]"
-          >
-            <ArrowUpRight v-if="stat.changeType === 'positive'" class="w-4 h-4" />
-            <ArrowDownRight v-else class="w-4 h-4" />
-            {{ stat.change }}
+  <div class="space-y-6">
+    <div class="rounded-[1.75rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_32%),linear-gradient(145deg,rgba(15,23,42,0.96),rgba(2,6,23,0.92))] p-6 shadow-[0_28px_80px_-36px_rgba(15,23,42,0.85)] lg:p-7">
+      <div class="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+        <div class="space-y-3">
+          <span class="inline-flex items-center gap-2 rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-200">
+            Dashboard
+          </span>
+          <div>
+            <h1 class="text-2xl font-bold text-white">Ringkasan Operasional Admin</h1>
+            <p class="mt-1 max-w-2xl text-sm leading-relaxed text-slate-400">Semua angka di halaman ini diambil langsung dari inbox, layanan aktif, FAQ, case study, dan audit log.</p>
           </div>
         </div>
-        <div class="mt-4">
-          <h3 class="text-3xl font-bold text-white">{{ stat.value }}</h3>
-          <p class="text-sm text-slate-400 mt-1">{{ stat.title }}</p>
+
+        <div class="flex items-center gap-3">
+          <span class="rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]" :class="dashboard?.stats.maintenanceMode ? 'border-amber-500/20 bg-amber-500/10 text-amber-200' : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200'">
+            {{ dashboard?.stats.maintenanceMode ? 'Maintenance Mode Aktif' : 'Situs Publik Aktif' }}
+          </span>
+          <button type="button" class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/10" :disabled="isLoading" @click="loadDashboard">
+            <RefreshCw class="h-4 w-4" :class="isLoading ? 'animate-spin' : ''" />
+            Refresh
+          </button>
         </div>
       </div>
     </div>
 
-    <!-- Charts Row -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Revenue Chart Placeholder -->
-      <div class="lg:col-span-2 glass-md p-6 rounded-xl border border-white/10">
-        <div class="flex items-center justify-between mb-6">
-          <h3 class="text-lg font-semibold text-white">Revenue Overview</h3>
-          <select class="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-sky-500">
-            <option>Last 7 days</option>
-            <option>Last 30 days</option>
-            <option>Last 90 days</option>
-          </select>
+    <div v-if="errorMessage" class="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-300">
+      {{ errorMessage }}
+    </div>
+
+    <div v-if="isLoading && !dashboard" class="rounded-xl border border-sky-500/20 bg-sky-500/10 px-4 py-3 text-sm text-sky-300">
+      Memuat dashboard dari database...
+    </div>
+
+    <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+      <article v-for="card in cards" :key="card.title" class="glass-md rounded-2xl border border-white/10 p-6">
+        <div class="flex items-start justify-between gap-4">
+          <div :class="['flex h-12 w-12 items-center justify-center rounded-2xl border bg-gradient-to-br', toneClass(card.tone)]">
+            <component :is="card.icon" class="h-5 w-5" />
+          </div>
+          <span class="text-xs uppercase tracking-[0.18em] text-slate-500">Real data</span>
         </div>
-        
-        <!-- Chart Placeholder -->
-        <div class="h-64 flex items-end justify-between gap-2">
-          <div 
-            v-for="i in 7" 
-            :key="i"
-            class="flex-1 bg-gradient-to-t from-sky-500/30 to-sky-500/10 rounded-t-lg relative group"
-            :style="{ height: `${30 + Math.random() * 70}%` }"
-          >
-            <div class="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-white/10 rounded text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity">
-              Rp {{ Math.floor(Math.random() * 5000000 + 1000000).toLocaleString() }}
+        <p class="mt-5 text-3xl font-semibold text-white">{{ card.value }}</p>
+        <h2 class="mt-2 text-sm font-semibold text-slate-200">{{ card.title }}</h2>
+        <p class="mt-1 text-sm text-slate-500">{{ card.helper }}</p>
+      </article>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+      <section class="glass-md rounded-2xl border border-white/10 p-6">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-semibold text-white">Distribusi Workflow Inbox</h2>
+            <p class="mt-1 text-sm text-slate-400">Pantau antrean follow up berdasarkan status yang aktif saat ini.</p>
+          </div>
+          <router-link to="/admin/inbox" class="text-sm font-medium text-sky-300 transition hover:text-sky-200">
+            Buka inbox →
+          </router-link>
+        </div>
+
+        <div class="mt-6 space-y-4">
+          <div v-for="item in dashboard?.workflow || []" :key="item.key" class="space-y-2">
+            <div class="flex items-center justify-between gap-4 text-sm">
+              <span class="font-medium text-white">{{ workflowLabel(item.key) }}</span>
+              <span class="text-slate-400">{{ item.count }}</span>
+            </div>
+            <div class="h-2 overflow-hidden rounded-full bg-white/5">
+              <div class="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400" :style="{ width: `${(item.count / workflowMax) * 100}%` }" />
             </div>
           </div>
         </div>
-        
-        <!-- X-axis labels -->
-        <div class="flex justify-between mt-2 text-xs text-slate-500">
-          <span>Mon</span>
-          <span>Tue</span>
-          <span>Wed</span>
-          <span>Thu</span>
-          <span>Fri</span>
-          <span>Sat</span>
-          <span>Sun</span>
-        </div>
-      </div>
 
-      <!-- Popular Services -->
-      <div class="glass-md p-6 rounded-xl border border-white/10">
-        <h3 class="text-lg font-semibold text-white mb-6">Popular Services</h3>
-        <div class="space-y-4">
-          <div 
-            v-for="(service, index) in popularServices" 
-            :key="service.name"
-            class="flex items-center gap-4"
-          >
-            <span class="text-slate-500 text-sm w-6">{{ index + 1 }}</span>
-            <div class="flex-1">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-sm font-medium text-white">{{ service.name }}</span>
-                <span class="text-xs text-slate-400">{{ service.orders }} orders</span>
-              </div>
-              <div class="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                <div 
-                  class="h-full bg-gradient-to-r from-sky-500 to-cyan-500 rounded-full"
-                  :style="{ width: `${(service.orders / 45) * 100}%` }"
-                />
-              </div>
+        <div class="public-divider mt-6 pt-6">
+          <h3 class="text-sm font-semibold uppercase tracking-[0.18em] text-slate-400">Kategori Kebutuhan</h3>
+          <div class="mt-4 flex flex-wrap gap-3">
+            <div v-for="item in dashboard?.categories || []" :key="item.key" class="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+              <p class="text-xs uppercase tracking-[0.18em] text-slate-500">{{ categoryLabel(item.key) }}</p>
+              <p class="mt-2 text-lg font-semibold text-white">{{ item.count }}</p>
             </div>
-            <span class="text-sm font-medium text-slate-400">{{ service.revenue }}</span>
           </div>
         </div>
-      </div>
+      </section>
+
+      <section class="glass-md rounded-2xl border border-white/10 overflow-hidden">
+        <div class="border-b border-white/10 px-6 py-5">
+          <div class="flex items-center justify-between gap-4">
+            <div>
+              <h2 class="text-lg font-semibold text-white">Inbox Terbaru</h2>
+              <p class="mt-1 text-sm text-slate-400">Pesan terbaru yang masuk dari form publik.</p>
+            </div>
+            <router-link to="/admin/inbox" class="text-sm font-medium text-sky-300 transition hover:text-sky-200">
+              Lihat semua →
+            </router-link>
+          </div>
+        </div>
+
+        <div v-if="(dashboard?.recentMessages.length || 0) === 0" class="px-6 py-10 text-sm text-slate-400">
+          Belum ada pesan yang masuk.
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-white/5 text-left">
+            <thead class="bg-white/[0.03]">
+              <tr>
+                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Pengirim</th>
+                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Kategori</th>
+                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Status</th>
+                <th class="px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Masuk</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+              <tr v-for="message in dashboard?.recentMessages || []" :key="message.id" class="hover:bg-white/[0.04] transition">
+                <td class="px-5 py-4">
+                  <p class="text-sm font-semibold text-white">{{ message.name }}</p>
+                  <p class="mt-1 text-xs text-slate-500">{{ message.company || 'Tanpa perusahaan' }}</p>
+                </td>
+                <td class="px-5 py-4 text-sm text-slate-300">{{ categoryLabel(message.category) }}</td>
+                <td class="px-5 py-4 text-sm text-slate-300">{{ workflowLabel(message.status) }}</td>
+                <td class="px-5 py-4 text-sm text-slate-400">{{ formatDate(message.submittedAt) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
 
-    <!-- Recent Orders -->
-    <div class="glass-md p-6 rounded-xl border border-white/10">
-      <div class="flex items-center justify-between mb-6">
-        <h3 class="text-lg font-semibold text-white">Recent Orders</h3>
-        <router-link 
-          to="/admin/services" 
-          class="text-sm text-sky-400 hover:text-sky-300 transition-colors"
-        >
-          Manage services →
-        </router-link>
+    <section class="glass-md rounded-2xl border border-white/10 overflow-hidden">
+      <div class="border-b border-white/10 px-6 py-5">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <h2 class="text-lg font-semibold text-white">Aktivitas Admin Terbaru</h2>
+            <p class="mt-1 text-sm text-slate-400">Ringkasan perubahan terakhir yang tercatat di audit log.</p>
+          </div>
+          <router-link to="/admin/audit-logs" class="text-sm font-medium text-sky-300 transition hover:text-sky-200">
+            Audit log lengkap →
+          </router-link>
+        </div>
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-white/10">
-              <th class="text-left text-xs font-medium text-slate-400 uppercase tracking-wider pb-3">Customer</th>
-              <th class="text-left text-xs font-medium text-slate-400 uppercase tracking-wider pb-3">Service</th>
-              <th class="text-left text-xs font-medium text-slate-400 uppercase tracking-wider pb-3">Amount</th>
-              <th class="text-left text-xs font-medium text-slate-400 uppercase tracking-wider pb-3">Status</th>
-              <th class="text-left text-xs font-medium text-slate-400 uppercase tracking-wider pb-3">Date</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-white/5">
-            <tr 
-              v-for="order in recentOrders" 
-              :key="order.id"
-              class="group hover:bg-white/5 transition-colors"
-            >
-              <td class="py-4">
-                <span class="text-sm font-medium text-white">{{ order.customer }}</span>
-              </td>
-              <td class="py-4">
-                <span class="text-sm text-slate-300">{{ order.service }}</span>
-              </td>
-              <td class="py-4">
-                <span class="text-sm font-medium text-white">{{ order.amount }}</span>
-              </td>
-              <td class="py-4">
-                <span 
-                  :class="[
-                    'inline-flex px-2.5 py-1 rounded-full text-xs font-medium capitalize',
-                    getStatusColor(order.status)
-                  ]"
-                >
-                  {{ order.status }}
-                </span>
-              </td>
-              <td class="py-4">
-                <span class="text-sm text-slate-400">{{ order.date }}</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div v-if="(dashboard?.recentAuditLogs.length || 0) === 0" class="px-6 py-10 text-sm text-slate-400">
+        Belum ada aktivitas admin yang tercatat.
       </div>
-    </div>
+
+      <div v-else class="divide-y divide-white/5">
+        <article v-for="log in dashboard?.recentAuditLogs || []" :key="log.id" class="flex flex-col gap-2 px-6 py-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p class="text-sm font-semibold text-white">{{ log.summary }}</p>
+            <p class="mt-1 text-sm text-slate-400">{{ log.actorName }} · {{ log.target }} · {{ log.action }}</p>
+          </div>
+          <p class="text-sm text-slate-500">{{ formatDate(log.createdAt) }}</p>
+        </article>
+      </div>
+    </section>
   </div>
 </template>

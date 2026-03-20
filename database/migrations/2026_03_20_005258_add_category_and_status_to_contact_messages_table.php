@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('contact_messages', function (Blueprint $table) {
+            $table->string('category', 100)->default('konsultasi')->after('company')->index();
+            $table->string('status', 50)->default('new')->after('message')->index();
+            $table->timestamp('status_changed_at')->nullable()->after('status');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('contact_messages', function (Blueprint $table) {
+            $table->dropColumn(['category', 'status', 'status_changed_at']);
+        });
+    }
+};

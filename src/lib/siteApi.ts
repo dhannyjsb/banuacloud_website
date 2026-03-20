@@ -101,6 +101,19 @@ export interface MarketingFaq {
   answer: string;
 }
 
+export interface MarketingCaseStudy {
+  title: string;
+  clientName: string;
+  category: string;
+  summary: string;
+  challenge: string;
+  solution: string;
+  outcome: string;
+  tags: string[];
+  galleryImages: string[];
+  isFeatured: boolean;
+}
+
 export interface LearnMoreServiceCard {
   slug: string;
   icon: string;
@@ -125,6 +138,11 @@ export interface LearnMorePageData {
   reasonsTitle: string;
   reasonsDescription: string;
   reasons: MarketingReason[];
+  caseStudiesEnabled: boolean;
+  caseStudyBadge: string;
+  caseStudyTitle: string;
+  caseStudyDescription: string;
+  caseStudies: MarketingCaseStudy[];
   faqBadge: string;
   faqTitle: string;
   faqDescription: string;
@@ -215,6 +233,9 @@ export interface AdminContentPayload {
   heroContent: HeroContent;
   features: FeatureItem[];
   testimonials: TestimonialItem[];
+  faqs: MarketingFaq[];
+  caseStudies: MarketingCaseStudy[];
+  caseStudiesEnabled: boolean;
   marketingCtas: AdminMarketingCtaConfig[];
 }
 
@@ -223,6 +244,7 @@ export interface ContactMessagePayload {
   email: string;
   whatsapp: string;
   company?: string;
+  category: string;
   message: string;
 }
 
@@ -232,19 +254,84 @@ export interface InboxMessage {
   email: string;
   whatsapp: string;
   company?: string | null;
+  category: string;
   message: string;
+  status: string;
   isRead: boolean;
   submittedAt?: string | null;
   readAt?: string | null;
+  statusChangedAt?: string | null;
 }
 
 export interface AdminInboxPayload {
   stats: {
     total: number;
     unread: number;
+    followUp: number;
+    byStatus: Record<string, number>;
   };
   messages: InboxMessage[];
 }
+
+export interface AdminDashboardPayload {
+  stats: {
+    totalMessages: number;
+    unreadMessages: number;
+    followUpMessages: number;
+    activeServices: number;
+    testimonials: number;
+    faqs: number;
+    caseStudies: number;
+    maintenanceMode: boolean;
+  };
+  workflow: Array<{ key: string; count: number }>;
+  categories: Array<{ key: string; count: number }>;
+  recentMessages: Array<{
+    id: string;
+    name: string;
+    company?: string | null;
+    category: string;
+    status: string;
+    isRead: boolean;
+    submittedAt?: string | null;
+  }>;
+  recentAuditLogs: AuditLogEntry[];
+}
+
+export interface AuditLogEntry {
+  id: string;
+  actorName: string;
+  actorEmail: string;
+  action: string;
+  target: string;
+  summary: string;
+  metadata?: Record<string, unknown>;
+  createdAt?: string | null;
+}
+
+export interface AdminAuditLogsPayload {
+  stats: {
+    total: number;
+    today: number;
+  };
+  logs: AuditLogEntry[];
+}
+
+export const contactCategoryOptions = [
+  { value: 'cloud', label: 'Cloud' },
+  { value: 'hosting', label: 'Hosting' },
+  { value: 'jaringan-gedung', label: 'Jaringan Gedung' },
+  { value: 'backup', label: 'Backup' },
+  { value: 'aplikasi', label: 'Aplikasi' },
+  { value: 'konsultasi', label: 'Konsultasi' },
+] as const;
+
+export const inboxWorkflowOptions = [
+  { value: 'new', label: 'Baru' },
+  { value: 'in_progress', label: 'Diproses' },
+  { value: 'contacted', label: 'Sudah Dihubungi' },
+  { value: 'resolved', label: 'Selesai' },
+] as const;
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '');
 
@@ -336,6 +423,48 @@ export const defaultTestimonials: TestimonialItem[] = [
     role: 'IT Manager',
     company: 'EcomStore',
     content: 'Migrasi ke Banua Cloud Nusantara berjalan mulus. Tim mereka menangani semuanya dengan profesional, dan performa website kami meningkat signifikan.',
+  },
+];
+
+export const defaultFaqs: MarketingFaq[] = [
+  {
+    question: 'Bagaimana cara memilih layanan yang tepat untuk bisnis saya?',
+    answer: 'Tim sales kami siap membantu Anda memilih layanan yang sesuai dengan kebutuhan. Anda dapat menghubungi kami melalui live chat, email, atau telepon untuk berkonsultasi secara gratis.',
+  },
+  {
+    question: 'Apakah saya bisa upgrade layanan di kemudian hari?',
+    answer: 'Tentu. Semua layanan kami dapat di-upgrade kapan saja. Anda cukup mengajukan upgrade melalui panel klien kami, dan tim kami akan memprosesnya dalam waktu singkat.',
+  },
+  {
+    question: 'Berapa lama waktu setup layanan?',
+    answer: 'Cloud VPS biasanya siap dalam 1-24 jam. Web hosting dan domain dapat aktif dalam hitungan menit setelah pembayaran terkonfirmasi.',
+  },
+];
+
+export const defaultCaseStudies: MarketingCaseStudy[] = [
+  {
+    title: 'Revitalisasi Jaringan Kantor Multi-Lantai',
+    clientName: 'PT Pilar Niaga Banua',
+    category: 'jaringan-gedung',
+    summary: 'Penataan ulang backbone dan distribusi jaringan untuk kantor pusat dengan kebutuhan perangkat lintas divisi.',
+    challenge: 'Topologi jaringan lama tidak terdokumentasi dan downtime sering terjadi saat beban operasional meningkat.',
+    solution: 'Audit titik jaringan, redesign segmentasi VLAN, perapihan rack, dan standardisasi labeling serta monitoring dasar.',
+    outcome: 'Jaringan lebih stabil, tim internal punya dokumentasi yang lebih rapi, dan ekspansi titik akses lebih terkontrol.',
+    tags: ['Audit jaringan', 'VLAN', 'Dokumentasi'],
+    galleryImages: ['/gallery/case-study-1.svg', '/gallery/case-study-2.svg', '/gallery/case-study-3.svg'],
+    isFeatured: true,
+  },
+  {
+    title: 'Migrasi Beban Kerja ke Cloud VPS Terkelola',
+    clientName: 'CV Sinar Data Nusantara',
+    category: 'cloud',
+    summary: 'Pemindahan aplikasi internal dan portal klien ke environment cloud yang lebih rapi dan mudah dipantau.',
+    challenge: 'Server lama sulit diskalakan, backup tidak konsisten, dan deployment masih manual.',
+    solution: 'Menyiapkan environment VPS baru, backup terjadwal, hardening dasar, dan alur deployment yang lebih terkontrol.',
+    outcome: 'Rilis lebih aman, kapasitas infrastruktur lebih jelas, dan backup masuk ke rutinitas operasional.',
+    tags: ['Cloud VPS', 'Backup', 'Deployment'],
+    galleryImages: ['/gallery/case-study-2.svg', '/gallery/case-study-3.svg', '/gallery/case-study-1.svg'],
+    isFeatured: true,
   },
 ];
 
@@ -576,6 +705,32 @@ export async function markAdminInboxMessageRead(token: string, messageId: string
   return parseResponse<{ message: InboxMessage }>(
     await fetch(`${API_BASE_URL}/admin/inbox/${messageId}/read`, {
       method: 'PATCH',
+      headers: authHeaders(token),
+    }),
+  );
+}
+
+export async function updateAdminInboxWorkflow(token: string, messageId: string, status: string) {
+  return parseResponse<{ message: InboxMessage }>(
+    await fetch(`${API_BASE_URL}/admin/inbox/${messageId}/workflow`, {
+      method: 'PATCH',
+      headers: authHeaders(token),
+      body: JSON.stringify({ status }),
+    }),
+  );
+}
+
+export async function fetchAdminDashboard(token: string) {
+  return parseResponse<AdminDashboardPayload>(
+    await fetch(`${API_BASE_URL}/admin/dashboard`, {
+      headers: authHeaders(token),
+    }),
+  );
+}
+
+export async function fetchAdminAuditLogs(token: string) {
+  return parseResponse<AdminAuditLogsPayload>(
+    await fetch(`${API_BASE_URL}/admin/audit-logs`, {
       headers: authHeaders(token),
     }),
   );

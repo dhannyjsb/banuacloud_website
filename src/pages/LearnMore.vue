@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { ArrowRight, Check, ChevronDown, ChevronUp } from 'lucide-vue-next';
+import { ArrowRight, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, X } from 'lucide-vue-next';
 import PublicFooter from '../components/public/PublicFooter.vue';
 import PublicNavbar from '../components/public/PublicNavbar.vue';
 import { resolveMarketingIcon, resolveServiceIcon } from '../lib/iconMaps';
 import { executeMarketingCtaTarget } from '../lib/marketingCta';
-import { fetchLearnMorePageFromApi, type LearnMorePageData } from '../lib/siteApi';
+import { contactCategoryOptions, fetchLearnMorePageFromApi, type LearnMorePageData } from '../lib/siteApi';
 import { useSiteBootstrap } from '../composables/useSiteBootstrap';
 import { useScrollReveal } from '../composables/useScrollReveal';
 
@@ -16,10 +16,19 @@ const page = ref<LearnMorePageData | null>(null);
 const isLoading = ref(true);
 const errorMessage = ref('');
 const openFaq = ref<number | null>(0);
+const activeGalleryImages = ref<string[]>([]);
+const activeGalleryTitle = ref('');
+const activeGalleryIndex = ref(0);
 const { siteSettings } = useSiteBootstrap();
 useScrollReveal(pageRef);
 
 const serviceHighlights = computed(() => page.value?.services.slice(0, 3).map((service) => service.title) ?? []);
+const shouldShowCaseStudies = computed(() => {
+  return Boolean(page.value?.caseStudiesEnabled) && (page.value?.caseStudies.length ?? 0) > 0;
+});
+const currentGalleryImage = computed(() => {
+  return activeGalleryImages.value[activeGalleryIndex.value] ?? '';
+});
 const companyCapabilities = [
   {
     icon: 'Server',
@@ -51,6 +60,58 @@ const toggleFaq = (index: number) => {
   openFaq.value = openFaq.value === index ? null : index;
 };
 
+const categoryLabel = (value: string) => {
+  return contactCategoryOptions.find((option) => option.value === value)?.label || value;
+};
+
+const openGallery = (images: string[], index: number, title: string) => {
+  activeGalleryImages.value = images;
+  activeGalleryIndex.value = index;
+  activeGalleryTitle.value = title;
+  document.body.style.overflow = 'hidden';
+};
+
+const closeGallery = () => {
+  activeGalleryImages.value = [];
+  activeGalleryIndex.value = 0;
+  activeGalleryTitle.value = '';
+  document.body.style.overflow = '';
+};
+
+const showPreviousGalleryImage = () => {
+  if (!activeGalleryImages.value.length) {
+    return;
+  }
+
+  activeGalleryIndex.value = (activeGalleryIndex.value - 1 + activeGalleryImages.value.length) % activeGalleryImages.value.length;
+};
+
+const showNextGalleryImage = () => {
+  if (!activeGalleryImages.value.length) {
+    return;
+  }
+
+  activeGalleryIndex.value = (activeGalleryIndex.value + 1) % activeGalleryImages.value.length;
+};
+
+const handleKeydown = (event: KeyboardEvent) => {
+  if (!currentGalleryImage.value) {
+    return;
+  }
+
+  if (event.key === 'Escape') {
+    closeGallery();
+  }
+
+  if (event.key === 'ArrowLeft') {
+    showPreviousGalleryImage();
+  }
+
+  if (event.key === 'ArrowRight') {
+    showNextGalleryImage();
+  }
+};
+
 const loadPage = async () => {
   isLoading.value = true;
   errorMessage.value = '';
@@ -78,7 +139,13 @@ const goToSecondaryCta = () => {
 };
 
 onMounted(() => {
+  document.addEventListener('keydown', handleKeydown);
   void loadPage();
+});
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown);
+  document.body.style.overflow = '';
 });
 </script>
 
@@ -223,6 +290,47 @@ onMounted(() => {
           </div>
         </section>
 
+        <section v-if="shouldShowCaseStudies" id="learn-more-case-studies" class="public-section public-anchor pt-0">
+          <div class="public-container pb-12">
+            <div class="reveal public-section-heading mb-12">
+              <span class="public-eyebrow mb-3">{{ page.caseStudyBadge }}</span>
+              <h2 class="public-section-title mb-3">{{ page.caseStudyTitle }}</h2>
+              <p class="text-[0.9375rem] leading-relaxed text-slate-500">{{ page.caseStudyDescription }}</p>
+            </div>
+
+            <div class="reveal-stagger grid gap-5 xl:grid-cols-3">
+              <article v-for="caseStudy in page.caseStudies" :key="`${caseStudy.clientName}-${caseStudy.title}`" class="reveal-item public-card p-6 md:p-7">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700">{{ categoryLabel(caseStudy.category) }}</span>
+                  <span v-if="caseStudy.isFeatured" class="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">Unggulan</span>
+                </div>
+
+                <div class="mt-4">
+                  <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{{ caseStudy.clientName }}</p>
+                  <h3 class="mt-2 text-lg font-semibold text-slate-900">{{ caseStudy.title }}</h3>
+                  <p class="mt-3 text-sm leading-relaxed text-slate-500">{{ caseStudy.summary }}</p>
+                </div>
+
+                <div v-if="caseStudy.tags.length" class="mt-5 flex flex-wrap gap-2">
+                  <span v-for="tag in caseStudy.tags" :key="tag" class="public-chip">{{ tag }}</span>
+                </div>
+
+                <div v-if="caseStudy.galleryImages.length" class="mt-5 grid grid-cols-3 gap-3">
+                  <button
+                    v-for="(image, imageIndex) in caseStudy.galleryImages"
+                    :key="`${caseStudy.title}-${imageIndex}`"
+                    type="button"
+                    class="group overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-100 shadow-[0_18px_40px_-30px_rgba(15,23,42,0.28)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-30px_rgba(15,23,42,0.35)]"
+                    @click="openGallery(caseStudy.galleryImages, imageIndex, caseStudy.title)"
+                  >
+                    <img :src="image" :alt="`${caseStudy.title} media ${imageIndex + 1}`" class="h-24 w-full object-cover transition duration-300 group-hover:scale-[1.03]" loading="lazy" />
+                  </button>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
         <section id="learn-more-faq" class="public-section public-anchor pt-0">
           <div class="public-container">
             <div class="reveal public-section-heading mb-12">
@@ -278,6 +386,41 @@ onMounted(() => {
         </section>
       </template>
     </main>
+
+    <div v-if="currentGalleryImage" class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/82 p-4 backdrop-blur-sm" @click="closeGallery">
+      <div class="relative w-full max-w-5xl" @click.stop>
+        <button type="button" class="absolute right-3 top-3 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-slate-950/70 text-white transition hover:bg-slate-900" @click="closeGallery">
+          <X class="h-5 w-5" />
+        </button>
+
+        <button
+          v-if="activeGalleryImages.length > 1"
+          type="button"
+          class="absolute left-3 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-slate-950/70 text-white transition hover:bg-slate-900"
+          @click="showPreviousGalleryImage"
+        >
+          <ChevronLeft class="h-5 w-5" />
+        </button>
+
+        <button
+          v-if="activeGalleryImages.length > 1"
+          type="button"
+          class="absolute right-3 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-slate-950/70 text-white transition hover:bg-slate-900"
+          @click="showNextGalleryImage"
+        >
+          <ChevronRight class="h-5 w-5" />
+        </button>
+
+        <div class="overflow-hidden rounded-[2rem] border border-white/10 bg-white p-3 shadow-[0_40px_120px_-45px_rgba(15,23,42,0.95)] sm:p-4">
+          <img :src="currentGalleryImage" :alt="`${activeGalleryTitle} preview`" class="max-h-[80vh] w-full rounded-[1.5rem] object-contain bg-slate-100" />
+        </div>
+
+        <div class="mt-4 flex items-center justify-between gap-4 px-2 text-sm text-white/90">
+          <p class="font-medium">{{ activeGalleryTitle }}</p>
+          <p>{{ activeGalleryIndex + 1 }} / {{ activeGalleryImages.length }}</p>
+        </div>
+      </div>
+    </div>
 
     <PublicFooter />
   </div>

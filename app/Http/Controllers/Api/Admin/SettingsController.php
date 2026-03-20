@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UploadCompanyLogoRequest;
 use App\Models\SiteSetting;
+use App\Support\AdminAuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -62,6 +63,18 @@ class SettingsController extends Controller
             'session_timeout' => $data['sessionTimeout'],
         ])->save();
 
+        AdminAuditLogger::record(
+            $request->user(),
+            'settings',
+            'updated',
+            sprintf('Updated site settings for %s.', $settings->site_name),
+            [
+                'maintenance_mode' => $settings->maintenance_mode,
+                'company_email' => $settings->company_email,
+                'company_phone' => $settings->company_phone,
+            ],
+        );
+
         return response()->json([
             'settings' => $this->formatSettings($settings->fresh()),
         ]);
@@ -86,7 +99,7 @@ class SettingsController extends Controller
         $logo->move($directory, $filename);
 
         $previousLogo = $settings->logo_url;
-        $logoUrl = '/uploads/company/' . $filename;
+        $logoUrl = '/uploads/company/'.$filename;
 
         $settings->forceFill([
             'logo_url' => $logoUrl,
@@ -95,6 +108,16 @@ class SettingsController extends Controller
         if ($previousLogo && str_starts_with($previousLogo, '/uploads/company/')) {
             File::delete(public_path(ltrim($previousLogo, '/')));
         }
+
+        AdminAuditLogger::record(
+            $request->user(),
+            'settings',
+            'logo_uploaded',
+            'Uploaded a new company logo.',
+            [
+                'logo_url' => $logoUrl,
+            ],
+        );
 
         return response()->json([
             'settings' => $this->formatSettings($settings->fresh()),
