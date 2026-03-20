@@ -14,6 +14,7 @@ import AdminAuditLogs from '../pages/admin/AuditLogs.vue';
 import AdminServices from '../pages/admin/Services.vue';
 import AdminSettings from '../pages/admin/Settings.vue';
 import AdminLayout from '../layouts/AdminLayout.vue';
+import { applySeoMeta } from '../lib/seo';
 
 // Public routes
 const publicRoutes = [
@@ -138,6 +139,19 @@ router.beforeEach(async (to) => {
   }
 
   return true;
+});
+
+router.afterEach((to) => {
+  if (to.path.startsWith('/admin')) {
+    applySeoMeta({
+      title: typeof to.meta.title === 'string' ? to.meta.title : 'Admin Panel',
+      description: 'Area admin Banua Cloud Nusantara.',
+      canonicalPath: to.fullPath,
+      robots: 'noindex, nofollow',
+      type: 'website',
+      schema: [],
+    });
+  }
 });
 
 export default router;

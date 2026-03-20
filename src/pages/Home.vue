@@ -5,6 +5,7 @@ import { ArrowRight, Check, Quote } from 'lucide-vue-next';
 import PublicFooter from '../components/public/PublicFooter.vue';
 import PublicNavbar from '../components/public/PublicNavbar.vue';
 import { useSiteBootstrap } from '../composables/useSiteBootstrap';
+import { useSeo } from '../lib/seo';
 import { useScrollReveal } from '../composables/useScrollReveal';
 import { resolveFeatureIcon, resolveMarketingIcon, resolveServiceIcon } from '../lib/iconMaps';
 
@@ -85,6 +86,42 @@ const companyFocusAreas = [
 ];
 
 const featuredCapabilities = computed(() => features.value.slice(0, 6));
+
+useSeo(
+  computed(() => ({
+    title: siteSettings.value.siteName,
+    description: heroContent.value.subtitle || siteSettings.value.siteDescription,
+    canonicalPath: '/',
+    type: 'website',
+    schema: [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Organization',
+        name: siteSettings.value.companyName || siteSettings.value.siteName,
+        url: typeof window === 'undefined' ? '' : window.location.origin,
+        logo: siteSettings.value.logoUrl || `${typeof window === 'undefined' ? '' : window.location.origin}/favicon.svg`,
+        description: siteSettings.value.siteDescription,
+        contactPoint: siteSettings.value.companyEmail
+          ? [
+              {
+                '@type': 'ContactPoint',
+                contactType: 'customer support',
+                email: siteSettings.value.companyEmail,
+                telephone: siteSettings.value.companyPhone,
+              },
+            ]
+          : [],
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: siteSettings.value.siteName,
+        url: typeof window === 'undefined' ? '' : window.location.origin,
+        description: heroContent.value.subtitle || siteSettings.value.siteDescription,
+      },
+    ],
+  })),
+);
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat('id-ID', {

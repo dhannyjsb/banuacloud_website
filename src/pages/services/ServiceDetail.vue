@@ -6,6 +6,7 @@ import PublicFooter from '../../components/public/PublicFooter.vue';
 import PublicNavbar from '../../components/public/PublicNavbar.vue';
 import { resolveMarketingIcon } from '../../lib/iconMaps';
 import { executeMarketingCtaTarget } from '../../lib/marketingCta';
+import { useSeo } from '../../lib/seo';
 import { fetchServiceDetailPageFromApi, type ServiceDetailPageData } from '../../lib/siteApi';
 import { useScrollReveal } from '../../composables/useScrollReveal';
 
@@ -82,6 +83,30 @@ const defaultHeroPrimaryTarget = computed(() => (pricingCards.value.length ? '#s
 const defaultHeroSecondaryTarget = computed(() => (page.value?.extraSection ? '#service-extra' : '#contact'));
 const defaultFooterPrimaryTarget = computed(() => '#service-contact');
 const defaultFooterSecondaryTarget = computed(() => '#contact');
+
+useSeo(
+  computed(() => ({
+    title: page.value?.name ? `${page.value.name}` : 'Layanan',
+    description: page.value?.heroDescription || 'Detail layanan Banua Cloud Nusantara.',
+    canonicalPath: page.value?.slug ? `/services/${page.value.slug}` : route.path,
+    type: 'article',
+    schema: page.value
+      ? [
+          {
+            '@context': 'https://schema.org',
+            '@type': 'Service',
+            name: page.value.name,
+            description: page.value.heroDescription,
+            url: typeof window === 'undefined' ? '' : `${window.location.origin}/services/${page.value.slug}`,
+            provider: {
+              '@type': 'Organization',
+              name: 'Banua Cloud Nusantara',
+            },
+          },
+        ]
+      : [],
+  })),
+);
 
 const goToHeroPrimaryCta = () => {
   executeMarketingCtaTarget(router, page.value?.heroPrimaryTarget, defaultHeroPrimaryTarget.value);

@@ -6,6 +6,7 @@ import PublicFooter from '../components/public/PublicFooter.vue';
 import PublicNavbar from '../components/public/PublicNavbar.vue';
 import { resolveMarketingIcon, resolveServiceIcon } from '../lib/iconMaps';
 import { executeMarketingCtaTarget } from '../lib/marketingCta';
+import { useSeo } from '../lib/seo';
 import { contactCategoryOptions, fetchLearnMorePageFromApi, type LearnMorePageData } from '../lib/siteApi';
 import { useSiteBootstrap } from '../composables/useSiteBootstrap';
 import { useScrollReveal } from '../composables/useScrollReveal';
@@ -55,6 +56,27 @@ const primaryFallbackTarget = computed(() => {
   const firstServiceSlug = page.value?.services[0]?.slug;
   return firstServiceSlug ? `/services/${firstServiceSlug}` : '#learn-more-services';
 });
+
+useSeo(
+  computed(() => ({
+    title: `Profil Layanan ${siteSettings.value.siteName}`,
+    description: page.value?.heroDescription || siteSettings.value.siteDescription,
+    canonicalPath: '/learn-more',
+    type: 'article',
+    image: siteSettings.value.logoUrl || undefined,
+    schema: page.value
+      ? [
+          {
+            '@context': 'https://schema.org',
+            '@type': 'AboutPage',
+            name: `Profil Layanan ${siteSettings.value.siteName}`,
+            url: typeof window === 'undefined' ? '' : `${window.location.origin}/learn-more`,
+            description: page.value.heroDescription,
+          },
+        ]
+      : [],
+  })),
+);
 
 const toggleFaq = (index: number) => {
   openFaq.value = openFaq.value === index ? null : index;
