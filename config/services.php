@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'maxmind' => [
+        'account_id' => env('MAXMIND_ACCOUNT_ID'),
+        'license_key' => env('MAXMIND_LICENSE_KEY', env('MAXMIND_API_KEY')),
+        'host' => env('MAXMIND_HOST', 'geoip.maxmind.com'),
+        'timeout' => env('MAXMIND_TIMEOUT', 3),
+        'connect_timeout' => env('MAXMIND_CONNECT_TIMEOUT', 2),
+        'database_path' => env('MAXMIND_DATABASE_PATH', storage_path('app/maxmind/GeoLite2-City.mmdb')),
+    ],
+
 ];

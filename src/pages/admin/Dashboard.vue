@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { FileText, History, MessageSquare, Package, RefreshCw } from 'lucide-vue-next';
+import AdminTrafficOverview from '../../components/admin/AdminTrafficOverview.vue';
 import { contactCategoryOptions, fetchAdminDashboard, inboxWorkflowOptions, type AdminDashboardPayload } from '../../lib/siteApi';
 import { useAuthStore } from '../../stores/auth';
 
@@ -115,7 +116,7 @@ onMounted(() => {
           </span>
           <div>
             <h1 class="text-2xl font-bold text-white">Ringkasan Operasional Admin</h1>
-            <p class="mt-1 max-w-2xl text-sm leading-relaxed text-slate-400">Semua angka di halaman ini diambil langsung dari inbox, layanan aktif, FAQ, case study, dan audit log.</p>
+            <p class="mt-1 max-w-3xl text-sm leading-relaxed text-slate-400">Dashboard ini sekarang menggabungkan data inbox, konten, audit log, dan traffic publik yang masuk dari halaman website secara real time.</p>
           </div>
         </div>
 
@@ -152,6 +153,8 @@ onMounted(() => {
         <p class="mt-1 text-sm text-slate-500">{{ card.helper }}</p>
       </article>
     </div>
+
+    <AdminTrafficOverview :traffic="dashboard?.traffic" :is-loading="isLoading && !dashboard" detail-route="/admin/traffic" />
 
     <div class="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
       <section class="glass-md rounded-2xl border border-white/10 p-6">

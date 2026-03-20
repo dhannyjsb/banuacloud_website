@@ -7,6 +7,7 @@ import ServiceDetail from '../pages/services/ServiceDetail.vue';
 // Admin Pages
 import AdminLogin from '../pages/admin/AdminLogin.vue';
 import AdminDashboard from '../pages/admin/Dashboard.vue';
+import AdminTraffic from '../pages/admin/Traffic.vue';
 import AdminContent from '../pages/admin/Content.vue';
 import AdminInbox from '../pages/admin/Inbox.vue';
 import AdminAuditLogs from '../pages/admin/AuditLogs.vue';
@@ -52,6 +53,12 @@ const adminRoutes = [
         name: 'AdminDashboard',
         component: AdminDashboard,
         meta: { title: 'Dashboard' }
+      },
+      {
+        path: 'traffic',
+        name: 'AdminTraffic',
+        component: AdminTraffic,
+        meta: { title: 'Traffic Monitoring' }
       },
       {
         path: 'content',

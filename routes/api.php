@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Admin\SettingsController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ContactMessageController;
 use App\Http\Controllers\Api\SiteDataController;
+use App\Http\Controllers\Api\VisitorVisitController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function (): void {
@@ -27,6 +28,7 @@ Route::prefix('site')->group(function (): void {
     Route::get('/learn-more', [SiteDataController::class, 'learnMore']);
     Route::get('/services/{slug}', [SiteDataController::class, 'serviceDetail']);
     Route::post('/contact-messages', [ContactMessageController::class, 'store']);
+    Route::post('/traffic-visits', [VisitorVisitController::class, 'store']);
 });
 
 Route::middleware(['auth:sanctum', 'admin.access'])->prefix('admin')->group(function (): void {

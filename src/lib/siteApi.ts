@@ -273,6 +273,63 @@ export interface AdminInboxPayload {
   messages: InboxMessage[];
 }
 
+export interface TrafficBreakdownItem {
+  label: string;
+  count: number;
+}
+
+export interface TrafficTrendPoint {
+  date: string;
+  label: string;
+  pageViews: number;
+  visitors: number;
+}
+
+export interface RecentVisitEntry {
+  id: string;
+  visitorToken?: string | null;
+  path: string;
+  routeName?: string | null;
+  pageTitle?: string | null;
+  referrerUrl?: string | null;
+  referrerHost?: string | null;
+  source: string;
+  medium?: string | null;
+  utmCampaign?: string | null;
+  ipAddress?: string | null;
+  browser?: string | null;
+  userAgent?: string | null;
+  countryCode?: string | null;
+  countryName?: string | null;
+  cityName?: string | null;
+  location: string;
+  visitedAt?: string | null;
+}
+
+export interface MostVisitedIpEntry {
+  ipAddress: string;
+  totalVisits: number;
+  uniqueVisitors: number;
+  browser?: string | null;
+  countryName?: string | null;
+  cityName?: string | null;
+  lastVisitedAt?: string | null;
+}
+
+export interface TrafficDashboardData {
+  todayVisitors: number;
+  todayPageViews: number;
+  geolocationEnabled: boolean;
+  geolocationMode: 'web_service' | 'database' | 'disabled';
+  topSources: TrafficBreakdownItem[];
+  topPages: TrafficBreakdownItem[];
+  topCountries: TrafficBreakdownItem[];
+  topCities: TrafficBreakdownItem[];
+  dailyTrend: TrafficTrendPoint[];
+  mostVisitedIps: MostVisitedIpEntry[];
+  recentVisits: RecentVisitEntry[];
+}
+
 export interface AdminDashboardPayload {
   stats: {
     totalMessages: number;
@@ -283,7 +340,10 @@ export interface AdminDashboardPayload {
     faqs: number;
     caseStudies: number;
     maintenanceMode: boolean;
+    todayVisitors: number;
+    todayPageViews: number;
   };
+  traffic: TrafficDashboardData;
   workflow: Array<{ key: string; count: number }>;
   categories: Array<{ key: string; count: number }>;
   recentMessages: Array<{
@@ -315,6 +375,17 @@ export interface AdminAuditLogsPayload {
     today: number;
   };
   logs: AuditLogEntry[];
+}
+
+export interface TrackVisitorVisitPayload {
+  visitorToken: string;
+  path: string;
+  routeName?: string | null;
+  pageTitle?: string | null;
+  referrerUrl?: string | null;
+  utmSource?: string | null;
+  utmMedium?: string | null;
+  utmCampaign?: string | null;
 }
 
 export const contactCategoryOptions = [
@@ -668,6 +739,17 @@ export async function submitContactMessage(payload: ContactMessagePayload) {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify(payload),
+    }),
+  );
+}
+
+export async function trackVisitorVisit(payload: TrackVisitorVisitPayload): Promise<void> {
+  await parseResponse<{ tracked: boolean }>(
+    await fetch(`${API_BASE_URL}/site/traffic-visits`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+      keepalive: true,
     }),
   );
 }

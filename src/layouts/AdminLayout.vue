@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import {
   LayoutDashboard,
+  Activity,
   FileText,
   MessageSquare,
   History,
@@ -73,6 +74,12 @@ const menuItems = computed(() => [
     name: 'Dashboard',
     path: '/admin',
     icon: LayoutDashboard,
+    badge: '',
+  },
+  {
+    name: 'Traffic',
+    path: '/admin/traffic',
+    icon: Activity,
     badge: '',
   },
   {
